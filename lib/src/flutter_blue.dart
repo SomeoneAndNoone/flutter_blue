@@ -16,11 +16,12 @@ class FlutterBlue {
   FlutterBlue._() {
     _channel.setMethodCallHandler((MethodCall call) {
       _methodStreamController.add(call);
+      return;
     });
 
-    // Send the log level to the underlying platforms.
-    setLogLevel(logLevel);
+    _setLogLevelIfAvailable();
   }
+
   static FlutterBlue _instance = new FlutterBlue._();
   static FlutterBlue get instance => _instance;
 
@@ -65,6 +66,13 @@ class FlutterBlue {
         .then((p) => p.map((d) => BluetoothDevice.fromProto(d)).toList());
   }
 
+  _setLogLevelIfAvailable() async {
+    if (await isAvailable) {
+      // Send the log level to the underlying platforms.
+      setLogLevel(logLevel);
+    }
+  }
+
   /// Starts a scan for Bluetooth Low Energy devices
   /// Timeout closes the stream after a specified [Duration]
   Stream<ScanResult> scan({
@@ -72,9 +80,11 @@ class FlutterBlue {
     List<Guid> withServices = const [],
     List<Guid> withDevices = const [],
     Duration timeout,
+    bool allowDuplicates = false,
   }) async* {
     var settings = protos.ScanSettings.create()
       ..androidScanMode = scanMode.value
+      ..allowDuplicates = allowDuplicates
       ..serviceUuids.addAll(withServices.map((g) => g.toString()).toList());
 
     if (_isScanning.value == true) {
@@ -87,7 +97,7 @@ class FlutterBlue {
     final killStreams = <Stream>[];
     killStreams.add(_stopScanPill);
     if (timeout != null) {
-      killStreams.add(TimerStream(null, timeout));
+      killStreams.add(Rx.timer(null, timeout));
     }
 
     // Clear scan results list
@@ -103,9 +113,9 @@ class FlutterBlue {
     }
 
     yield* FlutterBlue.instance._methodStream
-            .where((m) => m.method == "ScanResult")
-            .map((m) => m.arguments)
-        .takeUntil(MergeStream(killStreams))
+        .where((m) => m.method == "ScanResult")
+        .map((m) => m.arguments)
+        .takeUntil(Rx.merge(killStreams))
         .doOnDone(stopScan)
         .map((buffer) => new protos.ScanResult.fromBuffer(buffer))
         .map((p) {
@@ -127,12 +137,14 @@ class FlutterBlue {
     List<Guid> withServices = const [],
     List<Guid> withDevices = const [],
     Duration timeout,
+    bool allowDuplicates = false,
   }) async {
     await scan(
             scanMode: scanMode,
             withServices: withServices,
             withDevices: withDevices,
-            timeout: timeout)
+            timeout: timeout,
+            allowDuplicates: allowDuplicates)
         .drain();
     return _scanResults.value;
   }
@@ -248,6 +260,11 @@ class ScanResult {
 
   @override
   int get hashCode => device.hashCode;
+
+  @override
+  String toString() {
+    return 'ScanResult{device: $device, advertisementData: $advertisementData, rssi: $rssi}';
+  }
 }
 
 class AdvertisementData {
@@ -274,4 +291,9 @@ class AdvertisementData {
         manufacturerData = p.manufacturerData,
         serviceData = p.serviceData,
         serviceUuids = p.serviceUuids;
+
+  @override
+  String toString() {
+    return 'AdvertisementData{localName: $localName, txPowerLevel: $txPowerLevel, connectable: $connectable, manufacturerData: $manufacturerData, serviceData: $serviceData, serviceUuids: $serviceUuids}';
+  }
 }

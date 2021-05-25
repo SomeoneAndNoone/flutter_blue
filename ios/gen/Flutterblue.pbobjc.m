@@ -8,7 +8,7 @@
 #endif
 
 #if GPB_USE_PROTOBUF_FRAMEWORK_IMPORTS
- #import <Protobuf/GPBProtocolBuffers_RuntimeSupport.h>
+ #import <protobuf/GPBProtocolBuffers_RuntimeSupport.h>
 #else
  #import "GPBProtocolBuffers_RuntimeSupport.h"
 #endif
@@ -298,6 +298,7 @@ typedef struct ProtosAdvertisementData__storage_ {
 
 @dynamic androidScanMode;
 @dynamic serviceUuidsArray, serviceUuidsArray_Count;
+@dynamic allowDuplicates;
 
 typedef struct ProtosScanSettings__storage_ {
   uint32_t _has_storage_[1];
@@ -328,6 +329,15 @@ typedef struct ProtosScanSettings__storage_ {
         .offset = (uint32_t)offsetof(ProtosScanSettings__storage_, serviceUuidsArray),
         .flags = GPBFieldRepeated,
         .dataType = GPBDataTypeString,
+      },
+      {
+        .name = "allowDuplicates",
+        .dataTypeSpecific.className = NULL,
+        .number = ProtosScanSettings_FieldNumber_AllowDuplicates,
+        .hasIndex = 1,
+        .offset = 2,  // Stored in _has_storage_ to save space.
+        .flags = GPBFieldOptional,
+        .dataType = GPBDataTypeBool,
       },
     };
     GPBDescriptor *localDescriptor =
@@ -2084,7 +2094,7 @@ typedef struct ProtosConnectedDevicesResponse__storage_ {
 
 typedef struct ProtosMtuSizeRequest__storage_ {
   uint32_t _has_storage_[1];
-  int32_t mtu;
+  uint32_t mtu;
   NSString *remoteId;
 } ProtosMtuSizeRequest__storage_;
 
@@ -2110,7 +2120,7 @@ typedef struct ProtosMtuSizeRequest__storage_ {
         .hasIndex = 1,
         .offset = (uint32_t)offsetof(ProtosMtuSizeRequest__storage_, mtu),
         .flags = GPBFieldOptional,
-        .dataType = GPBDataTypeInt32,
+        .dataType = GPBDataTypeUInt32,
       },
     };
     GPBDescriptor *localDescriptor =
@@ -2140,7 +2150,7 @@ typedef struct ProtosMtuSizeRequest__storage_ {
 
 typedef struct ProtosMtuSizeResponse__storage_ {
   uint32_t _has_storage_[1];
-  int32_t mtu;
+  uint32_t mtu;
   NSString *remoteId;
 } ProtosMtuSizeResponse__storage_;
 
@@ -2166,7 +2176,7 @@ typedef struct ProtosMtuSizeResponse__storage_ {
         .hasIndex = 1,
         .offset = (uint32_t)offsetof(ProtosMtuSizeResponse__storage_, mtu),
         .flags = GPBFieldOptional,
-        .dataType = GPBDataTypeInt32,
+        .dataType = GPBDataTypeUInt32,
       },
     };
     GPBDescriptor *localDescriptor =

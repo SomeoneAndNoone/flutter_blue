@@ -1,4 +1,5 @@
 [![pub package](https://img.shields.io/pub/v/flutter_blue.svg)](https://pub.dartlang.org/packages/flutter_blue)
+[![Chat](https://img.shields.io/discord/634853295160033301.svg?style=flat-square&colorB=758ED3)](https://discord.gg/Yk5Efra)
 
 <br>
 <p align="center">
@@ -33,23 +34,27 @@ FlutterBlue flutterBlue = FlutterBlue.instance;
 
 ### Scan for devices
 ```dart
-/// Start scanning
-var scanSubscription = flutterBlue.scan().listen((scanResult) {
-    // do something with scan result
-    device = scanResult.device;
-    print('${device.name} found! rssi: ${scanResult.rssi}');
+// Start scanning
+flutterBlue.startScan(timeout: Duration(seconds: 4));
+
+// Listen to scan results
+var subscription = flutterBlue.scanResults.listen((results) {
+    // do something with scan results
+    for (ScanResult r in results) {
+        print('${r.device.name} found! rssi: ${r.rssi}');
+    }
 });
 
-/// Stop scanning
-scanSubscription.cancel();
+// Stop scanning
+flutterBlue.stopScan();
 ```
 
 ### Connect to a device
 ```dart
-/// Connect to the device
+// Connect to the device
 await device.connect();
 
-/// Disconnect from device
+// Disconnect from device
 device.disconnect();
 ```
 
@@ -100,6 +105,7 @@ characteristic.value.listen((value) {
 final mtu = await device.mtu.first;
 await device.requestMtu(512);
 ```
+Note that iOS will not allow requests of MTU size, and will always try to negotiate the highest possible MTU (iOS supports up to MTU size 185)
 
 ## Reference
 ### FlutterBlue API
@@ -119,7 +125,7 @@ await device.requestMtu(512);
 | services                    |  :white_check_mark:  |  :white_check_mark:  | Gets a list of services. Requires that discoverServices() has completed. |
 | state                       |  :white_check_mark:  |  :white_check_mark:  | Stream of state changes for the Bluetooth Device. |
 | mtu                         |  :white_check_mark:  |  :white_check_mark:  | Stream of mtu size changes. |
-| requestMtu                  |  :white_check_mark:  |  :white_check_mark:  | Request to change the MTU for the device. |
+| requestMtu                  |  :white_check_mark:  |                      | Request to change the MTU for the device. |
 
 ### BluetoothCharacteristic API
 |                             |       Android        |         iOS          |             Description            |
