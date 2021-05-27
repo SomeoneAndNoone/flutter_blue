@@ -1,5 +1,7 @@
 name: flutter_blue_example
 description: Demonstrates how to use the flutter_blue plugin.
+version: 0.8.0+1
+
 publish_to: "none"
 
 environment:
