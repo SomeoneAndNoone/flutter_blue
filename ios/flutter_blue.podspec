@@ -16,25 +16,12 @@ Bluetooth Low Energy plugin for Flutter.
   s.source_files = 'Classes/**/*', 'gen/**/*'
   s.public_header_files = 'Classes/**/*.h', 'gen/**/*.h'
   s.dependency 'Flutter'
-  s.platform = :ios, '10.0'
+  s.platform = :ios, '8.0'
   s.framework = 'CoreBluetooth'
 
-  # Fix was added for the issue: https://github.com/pauldemarco/flutter_blue/issues/292#issuecomment-510417473
-  protoc = ENV['PWD'] + '/ios/Pods/!ProtoCompiler/protoc'
-  objc_out = 'gen'
-  proto_in = '../protos'
-  s.prepare_command = <<-CMD
-    mkdir -p #{objc_out}
-    #{protoc} \
-        --objc_out=#{objc_out} \
-        --proto_path=#{proto_in} \
-        #{proto_in}/*.proto
-  CMD
-
-  s.subspec 'Protos' do |ss|
-    ss.source_files = 'gen/**/*.pbobjc.{h,m}'
-    # Fix for the issue: https://github.com/pauldemarco/flutter_blue/issues/386#issuecomment-540876291
-    # ss.header_mappings_dir = 'gen'
+  s.subspec "Protos" do |ss|
+    ss.source_files = "gen/*.pbobjc.{h,m}", "gen/**/*.pbobjc.{h,m}"
+    ss.header_mappings_dir = "gen"
     ss.requires_arc = false
     ss.dependency "Protobuf", '~> 3.11.4'
   end
