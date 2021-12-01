@@ -250,6 +250,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
                 if(mBluetoothAdapter.isEnabled()){
                    resultValue = mBluetoothAdapter.disable();
+                    mDevices.clear();
                 }
 
                 result.success(resultValue);
