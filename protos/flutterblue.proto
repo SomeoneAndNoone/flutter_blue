@@ -41,12 +41,15 @@ message AdvertisementData {
 message ScanSettings {
   int32 android_scan_mode = 1;
   repeated string service_uuids = 2;
+  bool allow_duplicates = 3;
+  string filter_device_name = 4;
 }
 
 message ScanResult {
   BluetoothDevice device = 1;  // The received peer's ID.
   AdvertisementData advertisement_data = 2;
   int32 rssi = 3;
+  int32 errorCodeIfError = 4;
 }
 
 message ConnectRequest {

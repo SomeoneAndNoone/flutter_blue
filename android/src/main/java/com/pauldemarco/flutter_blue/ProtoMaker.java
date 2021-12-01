@@ -40,6 +40,13 @@ public class ProtoMaker {
         if(advertisementData != null && advertisementData.length > 0)
             p.setAdvertisementData(AdvertisementParser.parse(advertisementData));
         p.setRssi(rssi);
+        p.setErrorCodeIfError(-555);
+        return p.build();
+    }
+
+    static Protos.ScanResult scanResultError(int errorCode) {
+        Protos.ScanResult.Builder p = Protos.ScanResult.newBuilder();
+        p.setErrorCodeIfError(errorCode);
         return p.build();
     }
 
@@ -89,6 +96,7 @@ public class ProtoMaker {
             }
         }
         p.setRssi(scanResult.getRssi());
+        p.setErrorCodeIfError(-555);
         p.setAdvertisementData(a.build());
         return p.build();
     }

@@ -7,13 +7,13 @@ package com.pauldemarco.flutter_blue;
 import android.app.Activity;
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.app.Application;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
-import android.bluetooth.BluetoothGattServer;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
@@ -42,6 +42,11 @@ import java.util.UUID;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
+import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
+import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.EventChannel.EventSink;
 import io.flutter.plugin.common.EventChannel.StreamHandler;
@@ -49,45 +54,137 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
+import io.flutter.plugin.common.PluginRegistry;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 import io.flutter.plugin.common.PluginRegistry.RequestPermissionsResultListener;
+import android.bluetooth.le.AdvertiseCallback;
+import android.bluetooth.le.AdvertiseData;
+import android.bluetooth.le.AdvertiseSettings;
+import android.bluetooth.le.BluetoothLeAdvertiser;
+import static android.bluetooth.le.AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY;
+import static android.bluetooth.le.AdvertiseSettings.ADVERTISE_TX_POWER_HIGH;
 
 
 /** FlutterBluePlugin */
-public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsResultListener  {
+public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCallHandler, RequestPermissionsResultListener  {
     private static final String TAG = "FlutterBluePlugin";
+    private Object initializationLock = new Object();
+    private Context context;
+    private MethodChannel channel;
     private static final String NAMESPACE = "plugins.pauldemarco.com/flutter_blue";
-    private static final int REQUEST_COARSE_LOCATION_PERMISSIONS = 1452;
-    static final private UUID CCCD_ID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
-    private final Registrar registrar;
-    private final Activity activity;
-    private final MethodChannel channel;
-    private final EventChannel stateChannel;
-    private final BluetoothManager mBluetoothManager;
+
+    private EventChannel stateChannel;
+    private BluetoothManager mBluetoothManager;
     private BluetoothAdapter mBluetoothAdapter;
+
+    private FlutterPluginBinding pluginBinding;
+    private ActivityPluginBinding activityBinding;
+    private Application application;
+    private Activity activity;
+
+    private static final int REQUEST_FINE_LOCATION_PERMISSIONS = 1452;
+    static final private UUID CCCD_ID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
     private final Map<String, BluetoothDeviceCache> mDevices = new HashMap<>();
     private LogLevel logLevel = LogLevel.EMERGENCY;
+    private static final int untitledCompanyManufacturerId = 65535;
 
     // Pending call and result for startScan, in the case where permissions are needed
     private MethodCall pendingCall;
     private Result pendingResult;
+    private ArrayList<String> macDeviceScanned = new ArrayList<>();
+    private boolean allowDuplicates = false;
 
     /** Plugin registration. */
     public static void registerWith(Registrar registrar) {
-        final FlutterBluePlugin instance = new FlutterBluePlugin(registrar);
-        registrar.addRequestPermissionsResultListener(instance);
+        FlutterBluePlugin instance = new FlutterBluePlugin();
+        Activity activity = registrar.activity();
+        Application application = null;
+        if (registrar.context() != null) {
+            application = (Application) (registrar.context().getApplicationContext());
+        }
+        instance.setup(registrar.messenger(), application, activity, registrar, null);
     }
 
-    FlutterBluePlugin(Registrar r){
-        this.registrar = r;
-        this.activity = r.activity();
-        this.channel = new MethodChannel(registrar.messenger(), NAMESPACE+"/methods");
-        this.stateChannel = new EventChannel(registrar.messenger(), NAMESPACE+"/state");
-        this.mBluetoothManager = (BluetoothManager) r.activity().getSystemService(Context.BLUETOOTH_SERVICE);
-        this.mBluetoothAdapter = mBluetoothManager.getAdapter();
-        channel.setMethodCallHandler(this);
-        stateChannel.setStreamHandler(stateHandler);
+    public FlutterBluePlugin() {}
+
+    @Override
+    public void onAttachedToEngine(FlutterPluginBinding binding) {
+        pluginBinding = binding;
     }
+
+    @Override
+    public void onDetachedFromEngine(FlutterPluginBinding binding) {
+        pluginBinding = null;
+
+    }
+
+    @Override
+    public void onAttachedToActivity(ActivityPluginBinding binding) {
+        activityBinding = binding;
+        setup(
+                pluginBinding.getBinaryMessenger(),
+                (Application) pluginBinding.getApplicationContext(),
+                activityBinding.getActivity(),
+                null,
+                activityBinding);
+    }
+
+    @Override
+    public void onDetachedFromActivity() {
+        tearDown();
+    }
+
+    @Override
+    public void onDetachedFromActivityForConfigChanges() {
+        onDetachedFromActivity();
+    }
+
+    @Override
+    public void onReattachedToActivityForConfigChanges(ActivityPluginBinding binding) {
+        onAttachedToActivity(binding);
+    }
+
+    private void setup(
+            final BinaryMessenger messenger,
+            final Application application,
+            final Activity activity,
+            final PluginRegistry.Registrar registrar,
+            final ActivityPluginBinding activityBinding) {
+        synchronized (initializationLock) {
+            Log.i(TAG, "setup");
+            this.activity = activity;
+            this.application = application;
+            this.context = application;
+            channel = new MethodChannel(messenger, NAMESPACE + "/methods");
+            channel.setMethodCallHandler(this);
+            stateChannel = new EventChannel(messenger, NAMESPACE + "/state");
+            stateChannel.setStreamHandler(stateHandler);
+            mBluetoothManager = (BluetoothManager) application.getSystemService(Context.BLUETOOTH_SERVICE);
+            mBluetoothAdapter = mBluetoothManager.getAdapter();
+            if (registrar != null) {
+                // V1 embedding setup for activity listeners.
+                registrar.addRequestPermissionsResultListener(this);
+            } else {
+                // V2 embedding setup for activity listeners.
+                activityBinding.addRequestPermissionsResultListener(this);
+            }
+        }
+    }
+
+    private void tearDown() {
+        Log.i(TAG, "teardown");
+        context = null;
+        activityBinding.removeRequestPermissionsResultListener(this);
+        activityBinding = null;
+        channel.setMethodCallHandler(null);
+        channel = null;
+        stateChannel.setStreamHandler(null);
+        stateChannel = null;
+        mBluetoothAdapter = null;
+        mBluetoothManager = null;
+        application = null;
+    }
+
 
     @Override
     public void onMethodCall(MethodCall call, Result result) {
@@ -139,22 +236,61 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
                 break;
             }
 
+            case "enableAdapter": {
+                boolean resultValue = true;
+                if(!mBluetoothAdapter.isEnabled()){
+                    resultValue = mBluetoothAdapter.enable();
+                }
+                result.success(resultValue);
+                break;
+            }
+
+            case "disableAdapter": {
+                boolean resultValue = true;
+
+                if(mBluetoothAdapter.isEnabled()){
+                   resultValue = mBluetoothAdapter.disable();
+                }
+
+                result.success(resultValue);
+                break;
+            }
+
             case "isOn":
             {
                 result.success(mBluetoothAdapter.isEnabled());
                 break;
             }
 
+            case "startAdvertising": {
+                result.success(startAdvertising(call));
+                break;
+            }
+
+            case "stopAdvertising": {
+                result.success(stopAdvertising());
+                break;
+            }
+
+            case "getCachedDevice": {
+                // todo khamidjon
+                String mac = call.arguments();
+                BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(mac);
+                Protos.BluetoothDevice bluetoothDevice = ProtoMaker.from(device);
+                result.success(bluetoothDevice.toByteArray());
+                break;
+            }
+
             case "startScan":
             {
-                if (ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION)
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
                         != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(
-                            activity,
+                            activityBinding.getActivity(),
                             new String[] {
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                                    Manifest.permission.ACCESS_FINE_LOCATION
                             },
-                            REQUEST_COARSE_LOCATION_PERMISSIONS);
+                            REQUEST_FINE_LOCATION_PERMISSIONS);
                     pendingCall = call;
                     pendingResult = result;
                     break;
@@ -215,9 +351,9 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
                 // New request, connect and add gattServer to Map
                 BluetoothGatt gattServer;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    gattServer = device.connectGatt(activity, options.getAndroidAutoConnect(), mGattCallback, BluetoothDevice.TRANSPORT_LE);
+                    gattServer = device.connectGatt(context, options.getAndroidAutoConnect(), mGattCallback, BluetoothDevice.TRANSPORT_LE);
                 } else {
-                    gattServer = device.connectGatt(activity, options.getAndroidAutoConnect(), mGattCallback);
+                    gattServer = device.connectGatt(context, options.getAndroidAutoConnect(), mGattCallback);
                 }
                 mDevices.put(deviceId, new BluetoothDeviceCache(gattServer));
                 result.success(null);
@@ -544,10 +680,60 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
         }
     }
 
+    private boolean startAdvertising(MethodCall call) {
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            BluetoothLeAdvertiser advertiser = mBluetoothAdapter.getBluetoothLeAdvertiser();
+
+            if (advertiser != null) {
+                AdvertiseSettings.Builder settingsBuilder = new AdvertiseSettings.Builder();
+                settingsBuilder.setConnectable(false)
+                        .setTimeout(0) // will be turned on indefinitely
+                        .setAdvertiseMode(ADVERTISE_MODE_LOW_LATENCY)
+                        .setTxPowerLevel(ADVERTISE_TX_POWER_HIGH);
+
+                byte[] manufacturerData = call.arguments();
+
+                AdvertiseData advertiseData = new AdvertiseData.Builder()
+                        .setIncludeDeviceName(false)
+                        .addManufacturerData(untitledCompanyManufacturerId, manufacturerData)
+                        .build();
+                advertiser.startAdvertising(settingsBuilder.build(), advertiseData, mAdvertiseCallback);
+                return true;
+            }
+        }
+
+        return false;
+
+    }
+
+    private boolean stopAdvertising() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            BluetoothLeAdvertiser advertiser = mBluetoothAdapter.getBluetoothLeAdvertiser();
+            if (advertiser != null) {
+                advertiser.stopAdvertising(mAdvertiseCallback);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private AdvertiseCallback mAdvertiseCallback = new AdvertiseCallback() {
+        @Override
+        public void onStartSuccess(AdvertiseSettings settingsInEffect) {
+            Log.d(TAG, "Peripheral advertising started");
+        }
+
+        @Override
+        public void onStartFailure(int errorCode) {
+            Log.d(TAG, "Peripheral advertising failed: " + errorCode);
+        }
+    };
+
     @Override
     public boolean onRequestPermissionsResult(
             int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == REQUEST_COARSE_LOCATION_PERMISSIONS) {
+        if (requestCode == REQUEST_FINE_LOCATION_PERMISSIONS) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startScan(pendingCall, pendingResult);
             } else {
@@ -635,13 +821,13 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
         public void onListen(Object o, EventChannel.EventSink eventSink) {
             sink = eventSink;
             IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-            activity.registerReceiver(mReceiver, filter);
+            context.registerReceiver(mReceiver, filter);
         }
 
         @Override
         public void onCancel(Object o) {
             sink = null;
-            activity.unregisterReceiver(mReceiver);
+            context.unregisterReceiver(mReceiver);
         }
     };
 
@@ -650,6 +836,8 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
         Protos.ScanSettings settings;
         try {
             settings = Protos.ScanSettings.newBuilder().mergeFrom(data).build();
+            allowDuplicates = settings.getAllowDuplicates();
+            macDeviceScanned.clear();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 startScan21(settings);
             } else {
@@ -679,6 +867,10 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
                 @Override
                 public void onScanResult(int callbackType, ScanResult result) {
                     super.onScanResult(callbackType, result);
+                    if (!allowDuplicates && result != null && result.getDevice() != null && result.getDevice().getAddress() != null) {
+                        if (macDeviceScanned.contains(result.getDevice().getAddress())) return;
+                        macDeviceScanned.add(result.getDevice().getAddress());
+                    }
                     Protos.ScanResult scanResult = ProtoMaker.from(result.getDevice(), result);
                     invokeMethodUIThread("ScanResult", scanResult.toByteArray());
                 }
@@ -686,12 +878,13 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
                 @Override
                 public void onBatchScanResults(List<ScanResult> results) {
                     super.onBatchScanResults(results);
-
                 }
 
                 @Override
                 public void onScanFailed(int errorCode) {
                     super.onScanFailed(errorCode);
+                    Protos.ScanResult scanResult = ProtoMaker.scanResultError(errorCode);
+                    invokeMethodUIThread("ScanResult", scanResult.toByteArray());
                 }
             };
         }
@@ -704,12 +897,21 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
         if(scanner == null) throw new IllegalStateException("getBluetoothLeScanner() is null. Is the Adapter on?");
         int scanMode = proto.getAndroidScanMode();
         int count = proto.getServiceUuidsCount();
-        List<ScanFilter> filters = new ArrayList<>(count);
+        String filterName = proto.getFilterDeviceName();
+
+        ArrayList<ScanFilter> filters = new ArrayList<>(count);
         for(int i = 0; i < count; i++) {
             String uuid = proto.getServiceUuids(i);
             ScanFilter f = new ScanFilter.Builder().setServiceUuid(ParcelUuid.fromString(uuid)).build();
             filters.add(f);
         }
+
+        if(filterName!=null && !filterName.isEmpty()){
+            filters.add(new ScanFilter.Builder()
+                    .setDeviceName(filterName)
+                    .build());
+        }
+
         ScanSettings settings = new ScanSettings.Builder().setScanMode(scanMode).build();
         scanner.startScan(filters, settings, getScanCallback21());
     }
@@ -728,6 +930,11 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
                 @Override
                 public void onLeScan(final BluetoothDevice bluetoothDevice, int rssi,
                                      byte[] scanRecord) {
+                    if (!allowDuplicates && bluetoothDevice != null && bluetoothDevice.getAddress() != null) {
+                        if (macDeviceScanned.contains(bluetoothDevice.getAddress())) return;
+                        macDeviceScanned.add(bluetoothDevice.getAddress());
+                    }
+
                     Protos.ScanResult scanResult = ProtoMaker.from(bluetoothDevice, scanRecord, rssi);
                     invokeMethodUIThread("ScanResult", scanResult.toByteArray());
                 }

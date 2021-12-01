@@ -1,6 +1,5 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_blue/flutter_blue.dart';
 
 void main() {
   const MethodChannel channel = MethodChannel('flutter_blue');
@@ -17,7 +16,7 @@ void main() {
     channel.setMockMethodCallHandler(null);
   });
 
-  test('getPlatformVersion', () async {
-    expect(await FlutterBlue.platformVersion, '42');
-  });
+  // test('getPlatformVersion', () async {
+  //   expect(await FlutterBlue.platformVersion, '42');
+  // });
 }
