@@ -83,7 +83,8 @@ class BluetoothOffScreen extends StatelessWidget {
 class FindDevicesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    List<String> filteredNames = ['Mi Smart Band 4', 'Soter'];
+    List<String> filteredNames = []; // ['Mi Smart Band 4', 'Soter'];
+    List<String> filteredMacAddresses = ['DA:02:DF:7F:71:92'];
     return Scaffold(
       appBar: AppBar(
         title: Text('Find Devices'),
@@ -106,9 +107,9 @@ class FindDevicesScreen extends StatelessWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () => FlutterBlue.instance.startScan(
-          timeout: Duration(seconds: 4),
-          filterNames: filteredNames,
-        ),
+            timeout: Duration(seconds: 4),
+            filterNames: filteredNames,
+            filterMacAddresses: filteredMacAddresses),
         child: SingleChildScrollView(
           child: Column(
             children: <Widget>[
@@ -191,6 +192,7 @@ class FindDevicesScreen extends StatelessWidget {
               onPressed: () => FlutterBlue.instance.startScan(
                 timeout: Duration(seconds: 10),
                 filterNames: filteredNames,
+                filterMacAddresses: filteredMacAddresses,
               ),
             );
           }

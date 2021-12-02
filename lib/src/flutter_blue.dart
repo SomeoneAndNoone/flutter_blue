@@ -124,10 +124,12 @@ class FlutterBlue {
     Duration? timeout,
     bool allowDuplicates = false,
     required List<String> filterNames,
+    required List<String> filterMacAddresses,
   }) async* {
     var settings = protos.ScanSettings.create()
       ..androidScanMode = scanMode.value
       ..allowDuplicates = allowDuplicates
+      ..filterMacAddresses.addAll(filterMacAddresses)
       ..filterDeviceNames.addAll(filterNames)
       ..serviceUuids.addAll(withServices.map((g) => g.toString()).toList());
 
@@ -192,12 +194,17 @@ class FlutterBlue {
   ///
   /// To observe the results while the scan is in progress, listen to the [scanResults] stream,
   /// or call [scan] instead.
+  ///
+  /// [filterNames] and [filterMacAddresses] should be used carefully. If you use both filters,
+  /// both are applied and all results will be shown. For example, if you search filterName 'MiBand'
+  /// and mac address '...33:A3', both devices will be returned from scan
   Future startScan({
     ScanMode scanMode = ScanMode.lowLatency,
     List<Guid> withServices = const [],
     List<Guid> withDevices = const [],
     Duration? timeout,
     required List<String> filterNames,
+    required List<String> filterMacAddresses,
     bool allowDuplicates = false,
   }) async {
     await scan(
@@ -207,6 +214,7 @@ class FlutterBlue {
       timeout: timeout,
       allowDuplicates: allowDuplicates,
       filterNames: filterNames,
+      filterMacAddresses: filterMacAddresses,
     ).drain();
     return _scanResults.value;
   }

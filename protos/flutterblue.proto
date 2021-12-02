@@ -43,6 +43,7 @@ message ScanSettings {
   repeated string service_uuids = 2;
   bool allow_duplicates = 3;
   repeated string filter_device_names = 4;
+  repeated string filter_mac_addresses = 5;
 }
 
 message ScanResult {

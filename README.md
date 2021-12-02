@@ -143,3 +143,7 @@ Note that iOS will not allow that you request the MTU size, but will always try 
 ### Scanning for service UUID's doesn't return any results
 Make sure the device is advertising which service UUID's it supports.  This is found in the advertisement
 packet as **UUID 16 bit complete list** or **UUID 128 bit complete list**.
+
+
+// build protos
+protoc --dart_out=../lib/gen ./flutterblue.proto

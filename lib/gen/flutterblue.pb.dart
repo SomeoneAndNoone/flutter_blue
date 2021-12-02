@@ -214,6 +214,7 @@ class ScanSettings extends $pb.GeneratedMessage {
     ..pPS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'serviceUuids')
     ..aOB(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'allowDuplicates')
     ..pPS(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'filterDeviceNames')
+    ..pPS(5, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'filterMacAddresses')
     ..hasRequiredFields = false
   ;
 
@@ -223,6 +224,7 @@ class ScanSettings extends $pb.GeneratedMessage {
     $core.Iterable<$core.String>? serviceUuids,
     $core.bool? allowDuplicates,
     $core.Iterable<$core.String>? filterDeviceNames,
+    $core.Iterable<$core.String>? filterMacAddresses,
   }) {
     final _result = create();
     if (androidScanMode != null) {
@@ -236,6 +238,9 @@ class ScanSettings extends $pb.GeneratedMessage {
     }
     if (filterDeviceNames != null) {
       _result.filterDeviceNames.addAll(filterDeviceNames);
+    }
+    if (filterMacAddresses != null) {
+      _result.filterMacAddresses.addAll(filterMacAddresses);
     }
     return _result;
   }
@@ -283,6 +288,9 @@ class ScanSettings extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(4)
   $core.List<$core.String> get filterDeviceNames => $_getList(3);
+
+  @$pb.TagNumber(5)
+  $core.List<$core.String> get filterMacAddresses => $_getList(4);
 }
 
 class ScanResult extends $pb.GeneratedMessage {

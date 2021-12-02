@@ -700,15 +700,14 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
     private void stopScan() {
         BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
-        if(scanner != null) scanner.stopScan(getScanCallback21());
+        if(scanner != null) scanner.stopScan(leScanMethod());
     }
 
-    private ScanCallback scanCallback21;
+    private ScanCallback scanCallback;
 
-    @TargetApi(21)
-    private ScanCallback getScanCallback21() {
-        if(scanCallback21 == null){
-            scanCallback21 = new ScanCallback() {
+    private ScanCallback leScanMethod() {
+        if(scanCallback == null){
+            scanCallback = new ScanCallback() {
 
                 @Override
                 public void onScanResult(int callbackType, ScanResult result) {
@@ -734,7 +733,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 }
             };
         }
-        return scanCallback21;
+        return scanCallback;
     }
 
     @TargetApi(21)
@@ -742,15 +741,16 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
         BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
         if(scanner == null) throw new IllegalStateException("getBluetoothLeScanner() is null. Is the Adapter on?");
         int scanMode = proto.getAndroidScanMode();
-        int count = proto.getServiceUuidsCount();
 
-        ArrayList<ScanFilter> filters = new ArrayList<>(count);
-        for(int i = 0; i < count; i++) {
+        // add service uuids filter
+        ArrayList<ScanFilter> filters = new ArrayList<>();
+        for(int i = 0; i < proto.getServiceUuidsCount(); i++) {
             String uuid = proto.getServiceUuids(i);
             ScanFilter f = new ScanFilter.Builder().setServiceUuid(ParcelUuid.fromString(uuid)).build();
             filters.add(f);
         }
 
+        // add device names filter
         for(int i = 0; i < proto.getFilterDeviceNamesCount(); i++) {
             filters.add(new ScanFilter.Builder()
                     .setDeviceName(proto.getFilterDeviceNames(i))
@@ -758,8 +758,16 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             );
         }
 
+        // add mac addresses filter
+        for(int i = 0; i < proto.getFilterMacAddressesCount(); i++) {
+            filters.add(new ScanFilter.Builder()
+                    .setDeviceAddress(proto.getFilterMacAddresses(i))
+                    .build()
+            );
+        }
+
         ScanSettings settings = new ScanSettings.Builder().setScanMode(scanMode).build();
-        scanner.startScan(filters, settings, getScanCallback21());
+        scanner.startScan(filters, settings, leScanMethod());
     }
 
     @Override
