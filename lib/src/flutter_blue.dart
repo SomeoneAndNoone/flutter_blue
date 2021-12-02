@@ -111,6 +111,39 @@ class FlutterBlue {
     return BluetoothDevice.fromProto(device);
   }
 
+  /// Starts a scan and returns a future that will complete once the scan has finished.
+  ///
+  /// Once a scan is started, call [stopScan] to stop the scan and complete the returned future.
+  ///
+  /// timeout automatically stops the scan after a specified [Duration].
+  ///
+  /// To observe the results while the scan is in progress, listen to the [scanResults] stream,
+  /// or call [scan] instead.
+  ///
+  /// [filterNames] and [filterMacAddresses] should be used carefully. If you use both filters,
+  /// both are applied and all results will be shown. For example, if you search filterName 'MiBand'
+  /// and mac address '...33:A3', both devices will be returned from scan
+  Future startScan({
+    ScanMode scanMode = ScanMode.lowLatency,
+    List<Guid> withServices = const [],
+    List<Guid> withDevices = const [],
+    Duration? timeout,
+    required List<String> filterNames,
+    required List<String> filterMacAddresses,
+    bool allowDuplicates = false,
+  }) async {
+    await scan(
+      scanMode: scanMode,
+      withServices: withServices,
+      withDevices: withDevices,
+      timeout: timeout,
+      allowDuplicates: allowDuplicates,
+      filterNames: filterNames,
+      filterMacAddresses: filterMacAddresses,
+    ).drain();
+    return _scanResults.value;
+  }
+
   /// Starts a scan for Bluetooth Low Energy devices and returns a stream
   /// of the [ScanResult] results as they are received.
   ///
@@ -184,39 +217,6 @@ class FlutterBlue {
       _scanResults.add(list);
       return result;
     });
-  }
-
-  /// Starts a scan and returns a future that will complete once the scan has finished.
-  ///
-  /// Once a scan is started, call [stopScan] to stop the scan and complete the returned future.
-  ///
-  /// timeout automatically stops the scan after a specified [Duration].
-  ///
-  /// To observe the results while the scan is in progress, listen to the [scanResults] stream,
-  /// or call [scan] instead.
-  ///
-  /// [filterNames] and [filterMacAddresses] should be used carefully. If you use both filters,
-  /// both are applied and all results will be shown. For example, if you search filterName 'MiBand'
-  /// and mac address '...33:A3', both devices will be returned from scan
-  Future startScan({
-    ScanMode scanMode = ScanMode.lowLatency,
-    List<Guid> withServices = const [],
-    List<Guid> withDevices = const [],
-    Duration? timeout,
-    required List<String> filterNames,
-    required List<String> filterMacAddresses,
-    bool allowDuplicates = false,
-  }) async {
-    await scan(
-      scanMode: scanMode,
-      withServices: withServices,
-      withDevices: withDevices,
-      timeout: timeout,
-      allowDuplicates: allowDuplicates,
-      filterNames: filterNames,
-      filterMacAddresses: filterMacAddresses,
-    ).drain();
-    return _scanResults.value;
   }
 
   /// Stops a scan for Bluetooth Low Energy devices
