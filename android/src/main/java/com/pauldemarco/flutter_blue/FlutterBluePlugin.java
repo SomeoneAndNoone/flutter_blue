@@ -839,11 +839,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             settings = Protos.ScanSettings.newBuilder().mergeFrom(data).build();
             allowDuplicates = settings.getAllowDuplicates();
             macDeviceScanned.clear();
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                startScan21(settings);
-            } else {
-                startScan18(settings);
-            }
+            startScan21(settings);
             result.success(null);
         } catch (Exception e) {
             result.error("startScan", e.getMessage(), e);
@@ -851,11 +847,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     }
 
     private void stopScan() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            stopScan21();
-        } else {
-            stopScan18();
-        }
+        stopScan21();
     }
 
     private ScanCallback scanCallback21;
@@ -925,38 +917,6 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
     private BluetoothAdapter.LeScanCallback scanCallback18;
 
-    private BluetoothAdapter.LeScanCallback getScanCallback18() {
-        if(scanCallback18 == null) {
-            scanCallback18 = new BluetoothAdapter.LeScanCallback() {
-                @Override
-                public void onLeScan(final BluetoothDevice bluetoothDevice, int rssi,
-                                     byte[] scanRecord) {
-                    if (!allowDuplicates && bluetoothDevice != null && bluetoothDevice.getAddress() != null) {
-                        if (macDeviceScanned.contains(bluetoothDevice.getAddress())) return;
-                        macDeviceScanned.add(bluetoothDevice.getAddress());
-                    }
-
-                    Protos.ScanResult scanResult = ProtoMaker.from(bluetoothDevice, scanRecord, rssi);
-                    invokeMethodUIThread("ScanResult", scanResult.toByteArray());
-                }
-            };
-        }
-        return scanCallback18;
-    }
-
-    private void startScan18(Protos.ScanSettings proto) throws IllegalStateException {
-        List<String> serviceUuids = proto.getServiceUuidsList();
-        UUID[] uuids = new UUID[serviceUuids.size()];
-        for(int i = 0; i < serviceUuids.size(); i++) {
-            uuids[i] = UUID.fromString(serviceUuids.get(i));
-        }
-        boolean success = mBluetoothAdapter.startLeScan(uuids, getScanCallback18());
-        if(!success) throw new IllegalStateException("getBluetoothLeScanner() is null. Is the Adapter on?");
-    }
-
-    private void stopScan18() {
-        mBluetoothAdapter.stopLeScan(getScanCallback18());
-    }
 
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
