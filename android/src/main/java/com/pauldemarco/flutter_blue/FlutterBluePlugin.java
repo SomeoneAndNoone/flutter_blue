@@ -847,7 +847,8 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     }
 
     private void stopScan() {
-        stopScan21();
+        BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
+        if(scanner != null) scanner.stopScan(getScanCallback21());
     }
 
     private ScanCallback scanCallback21;
@@ -908,14 +909,6 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
         ScanSettings settings = new ScanSettings.Builder().setScanMode(scanMode).build();
         scanner.startScan(filters, settings, getScanCallback21());
     }
-
-    @TargetApi(21)
-    private void stopScan21() {
-        BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
-        if(scanner != null) scanner.stopScan(getScanCallback21());
-    }
-
-    private BluetoothAdapter.LeScanCallback scanCallback18;
 
 
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
