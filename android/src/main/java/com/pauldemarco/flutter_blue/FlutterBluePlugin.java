@@ -251,7 +251,8 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
                 if(mBluetoothAdapter.isEnabled()){
                    resultValue = mBluetoothAdapter.disable();
-                    mDevices.clear();
+                   mDevices.clear();
+                   macDeviceScanned.clear();
                 }
 
                 result.success(resultValue);
@@ -275,7 +276,6 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             }
 
             case "getCachedDevice": {
-                // todo khamidjon
                 String mac = call.arguments();
                 BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(mac);
                 Protos.BluetoothDevice bluetoothDevice = ProtoMaker.from(device);
@@ -736,7 +736,6 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
         return scanCallback;
     }
 
-    @TargetApi(21)
     private void startScan21(Protos.ScanSettings proto) throws IllegalStateException {
         BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
         if(scanner == null) throw new IllegalStateException("getBluetoothLeScanner() is null. Is the Adapter on?");
