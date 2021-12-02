@@ -186,6 +186,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     }
 
 
+    /// START ---------------------------- METHOD CALLS FROM DART --------------------------------------
     @Override
     public void onMethodCall(MethodCall call, Result result) {
         if(mBluetoothAdapter == null && !"isAvailable".equals(call.method)) {
@@ -680,6 +681,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             }
         }
     }
+    /// END ---------------------------- METHOD CALLS FROM DART --------------------------------------
 
     /// START ---------------------------- SCANNING RELATED METHODS --------------------------------------
     private void startScan(MethodCall call, Result result) {
