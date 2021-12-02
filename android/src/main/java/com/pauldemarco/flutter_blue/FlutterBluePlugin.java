@@ -681,157 +681,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
         }
     }
 
-    private boolean startAdvertising(MethodCall call) {
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            BluetoothLeAdvertiser advertiser = mBluetoothAdapter.getBluetoothLeAdvertiser();
-
-            if (advertiser != null) {
-                AdvertiseSettings.Builder settingsBuilder = new AdvertiseSettings.Builder();
-                settingsBuilder.setConnectable(false)
-                        .setTimeout(0) // will be turned on indefinitely
-                        .setAdvertiseMode(ADVERTISE_MODE_LOW_LATENCY)
-                        .setTxPowerLevel(ADVERTISE_TX_POWER_HIGH);
-
-                byte[] manufacturerData = call.arguments();
-
-                AdvertiseData advertiseData = new AdvertiseData.Builder()
-                        .setIncludeDeviceName(false)
-                        .addManufacturerData(untitledCompanyManufacturerId, manufacturerData)
-                        .build();
-                advertiser.startAdvertising(settingsBuilder.build(), advertiseData, mAdvertiseCallback);
-                return true;
-            }
-        }
-
-        return false;
-
-    }
-
-    private boolean stopAdvertising() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            BluetoothLeAdvertiser advertiser = mBluetoothAdapter.getBluetoothLeAdvertiser();
-            if (advertiser != null) {
-                advertiser.stopAdvertising(mAdvertiseCallback);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private AdvertiseCallback mAdvertiseCallback = new AdvertiseCallback() {
-        @Override
-        public void onStartSuccess(AdvertiseSettings settingsInEffect) {
-            Log.d(TAG, "Peripheral advertising started");
-        }
-
-        @Override
-        public void onStartFailure(int errorCode) {
-            Log.d(TAG, "Peripheral advertising failed: " + errorCode);
-        }
-    };
-
-    @Override
-    public boolean onRequestPermissionsResult(
-            int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == REQUEST_FINE_LOCATION_PERMISSIONS) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startScan(pendingCall, pendingResult);
-            } else {
-                pendingResult.error(
-                        "no_permissions", "flutter_blue plugin requires location permissions for scanning", null);
-                pendingResult = null;
-                pendingCall = null;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    private BluetoothGatt locateGatt(String remoteId) throws Exception {
-        BluetoothDeviceCache cache = mDevices.get(remoteId);
-        if(cache == null || cache.gatt == null) {
-            throw new Exception("no instance of BluetoothGatt, have you connected first?");
-        } else {
-            return cache.gatt;
-        }
-    }
-
-    private BluetoothGattCharacteristic locateCharacteristic(BluetoothGatt gattServer, String serviceId, String secondaryServiceId, String characteristicId) throws Exception {
-        BluetoothGattService primaryService = gattServer.getService(UUID.fromString(serviceId));
-        if(primaryService == null) {
-            throw new Exception("service (" + serviceId + ") could not be located on the device");
-        }
-        BluetoothGattService secondaryService = null;
-        if(secondaryServiceId.length() > 0) {
-            for(BluetoothGattService s : primaryService.getIncludedServices()){
-                if(s.getUuid().equals(UUID.fromString(secondaryServiceId))){
-                    secondaryService = s;
-                }
-            }
-            if(secondaryService == null) {
-                throw new Exception("secondary service (" + secondaryServiceId + ") could not be located on the device");
-            }
-        }
-        BluetoothGattService service = (secondaryService != null) ? secondaryService : primaryService;
-        BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(characteristicId));
-        if(characteristic == null) {
-            throw new Exception("characteristic (" + characteristicId + ") could not be located in the service ("+service.getUuid().toString()+")");
-        }
-        return characteristic;
-    }
-
-    private BluetoothGattDescriptor locateDescriptor(BluetoothGattCharacteristic characteristic, String descriptorId) throws Exception {
-        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID.fromString(descriptorId));
-        if(descriptor == null) {
-            throw new Exception("descriptor (" + descriptorId + ") could not be located in the characteristic ("+characteristic.getUuid().toString()+")");
-        }
-        return descriptor;
-    }
-
-    private final StreamHandler stateHandler = new StreamHandler() {
-        private EventSink sink;
-
-        private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                final String action = intent.getAction();
-
-                if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
-                    final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE,
-                            BluetoothAdapter.ERROR);
-                    switch (state) {
-                        case BluetoothAdapter.STATE_OFF:
-                            sink.success(Protos.BluetoothState.newBuilder().setState(Protos.BluetoothState.State.OFF).build().toByteArray());
-                            break;
-                        case BluetoothAdapter.STATE_TURNING_OFF:
-                            sink.success(Protos.BluetoothState.newBuilder().setState(Protos.BluetoothState.State.TURNING_OFF).build().toByteArray());
-                            break;
-                        case BluetoothAdapter.STATE_ON:
-                            sink.success(Protos.BluetoothState.newBuilder().setState(Protos.BluetoothState.State.ON).build().toByteArray());
-                            break;
-                        case BluetoothAdapter.STATE_TURNING_ON:
-                            sink.success(Protos.BluetoothState.newBuilder().setState(Protos.BluetoothState.State.TURNING_ON).build().toByteArray());
-                            break;
-                    }
-                }
-            }
-        };
-
-        @Override
-        public void onListen(Object o, EventChannel.EventSink eventSink) {
-            sink = eventSink;
-            IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-            context.registerReceiver(mReceiver, filter);
-        }
-
-        @Override
-        public void onCancel(Object o) {
-            sink = null;
-            context.unregisterReceiver(mReceiver);
-        }
-    };
-
+    /// START ---------------------------- SCANNING RELATED METHODS --------------------------------------
     private void startScan(MethodCall call, Result result) {
         byte[] data = call.arguments();
         Protos.ScanSettings settings;
@@ -910,7 +760,169 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
         scanner.startScan(filters, settings, getScanCallback21());
     }
 
+    @Override
+    public boolean onRequestPermissionsResult(
+            int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == REQUEST_FINE_LOCATION_PERMISSIONS) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startScan(pendingCall, pendingResult);
+            } else {
+                pendingResult.error(
+                        "no_permissions", "flutter_blue plugin requires location permissions for scanning", null);
+                pendingResult = null;
+                pendingCall = null;
+            }
+            return true;
+        }
+        return false;
+    }
+    /// END ---------------------------- SCANNING RELATED METHODS --------------------------------------
 
+
+
+    /// START ---------------------------- ADVERTISING RELATED METHODS --------------------------------------
+    private boolean startAdvertising(MethodCall call) {
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            BluetoothLeAdvertiser advertiser = mBluetoothAdapter.getBluetoothLeAdvertiser();
+
+            if (advertiser != null) {
+                AdvertiseSettings.Builder settingsBuilder = new AdvertiseSettings.Builder();
+                settingsBuilder.setConnectable(false)
+                        .setTimeout(0) // will be turned on indefinitely
+                        .setAdvertiseMode(ADVERTISE_MODE_LOW_LATENCY)
+                        .setTxPowerLevel(ADVERTISE_TX_POWER_HIGH);
+
+                byte[] manufacturerData = call.arguments();
+
+                AdvertiseData advertiseData = new AdvertiseData.Builder()
+                        .setIncludeDeviceName(false)
+                        .addManufacturerData(untitledCompanyManufacturerId, manufacturerData)
+                        .build();
+                advertiser.startAdvertising(settingsBuilder.build(), advertiseData, mAdvertiseCallback);
+                return true;
+            }
+        }
+
+        return false;
+
+    }
+
+    private boolean stopAdvertising() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            BluetoothLeAdvertiser advertiser = mBluetoothAdapter.getBluetoothLeAdvertiser();
+            if (advertiser != null) {
+                advertiser.stopAdvertising(mAdvertiseCallback);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private AdvertiseCallback mAdvertiseCallback = new AdvertiseCallback() {
+        @Override
+        public void onStartSuccess(AdvertiseSettings settingsInEffect) {
+            Log.d(TAG, "Peripheral advertising started");
+        }
+
+        @Override
+        public void onStartFailure(int errorCode) {
+            Log.d(TAG, "Peripheral advertising failed: " + errorCode);
+        }
+    };
+    /// END ---------------------------- ADVERTISING RELATED METHODS --------------------------------------
+
+
+    /// START ---------------------------- LOCATING LOCAL CACHE OBJECTS RELATED METHODS --------------------------------------
+    private BluetoothGatt locateGatt(String remoteId) throws Exception {
+        BluetoothDeviceCache cache = mDevices.get(remoteId);
+        if(cache == null || cache.gatt == null) {
+            throw new Exception("no instance of BluetoothGatt, have you connected first?");
+        } else {
+            return cache.gatt;
+        }
+    }
+
+    private BluetoothGattCharacteristic locateCharacteristic(BluetoothGatt gattServer, String serviceId, String secondaryServiceId, String characteristicId) throws Exception {
+        BluetoothGattService primaryService = gattServer.getService(UUID.fromString(serviceId));
+        if(primaryService == null) {
+            throw new Exception("service (" + serviceId + ") could not be located on the device");
+        }
+        BluetoothGattService secondaryService = null;
+        if(secondaryServiceId.length() > 0) {
+            for(BluetoothGattService s : primaryService.getIncludedServices()){
+                if(s.getUuid().equals(UUID.fromString(secondaryServiceId))){
+                    secondaryService = s;
+                }
+            }
+            if(secondaryService == null) {
+                throw new Exception("secondary service (" + secondaryServiceId + ") could not be located on the device");
+            }
+        }
+        BluetoothGattService service = (secondaryService != null) ? secondaryService : primaryService;
+        BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(characteristicId));
+        if(characteristic == null) {
+            throw new Exception("characteristic (" + characteristicId + ") could not be located in the service ("+service.getUuid().toString()+")");
+        }
+        return characteristic;
+    }
+
+    private BluetoothGattDescriptor locateDescriptor(BluetoothGattCharacteristic characteristic, String descriptorId) throws Exception {
+        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID.fromString(descriptorId));
+        if(descriptor == null) {
+            throw new Exception("descriptor (" + descriptorId + ") could not be located in the characteristic ("+characteristic.getUuid().toString()+")");
+        }
+        return descriptor;
+    }
+    /// END ---------------------------- LOCATING LOCAL CACHE OBJECTS RELATED METHODS --------------------------------------
+
+
+    /// START ---------------------------- BLUETOOTH ON/OFF STATE HANDLER --------------------------------------
+    private final StreamHandler stateHandler = new StreamHandler() {
+        private EventSink sink;
+
+        private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                final String action = intent.getAction();
+
+                if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
+                    final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE,
+                            BluetoothAdapter.ERROR);
+                    switch (state) {
+                        case BluetoothAdapter.STATE_OFF:
+                            sink.success(Protos.BluetoothState.newBuilder().setState(Protos.BluetoothState.State.OFF).build().toByteArray());
+                            break;
+                        case BluetoothAdapter.STATE_TURNING_OFF:
+                            sink.success(Protos.BluetoothState.newBuilder().setState(Protos.BluetoothState.State.TURNING_OFF).build().toByteArray());
+                            break;
+                        case BluetoothAdapter.STATE_ON:
+                            sink.success(Protos.BluetoothState.newBuilder().setState(Protos.BluetoothState.State.ON).build().toByteArray());
+                            break;
+                        case BluetoothAdapter.STATE_TURNING_ON:
+                            sink.success(Protos.BluetoothState.newBuilder().setState(Protos.BluetoothState.State.TURNING_ON).build().toByteArray());
+                            break;
+                    }
+                }
+            }
+        };
+
+        @Override
+        public void onListen(Object o, EventChannel.EventSink eventSink) {
+            sink = eventSink;
+            IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+            context.registerReceiver(mReceiver, filter);
+        }
+
+        @Override
+        public void onCancel(Object o) {
+            sink = null;
+            context.unregisterReceiver(mReceiver);
+        }
+    };
+    /// END ---------------------------- BLUETOOTH ON/OFF STATE HANDLER --------------------------------------
+
+    /// START ---------------------------- CONNECTION STATUS RELATED METHODS  --------------------------------------
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
@@ -1040,7 +1052,10 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             }
         }
     };
+    /// END ---------------------------- CONNECTION STATUS RELATED METHODS  --------------------------------------
 
+
+    /// START ---------------------------- LOGGING  --------------------------------------
     enum LogLevel
     {
         EMERGENCY, ALERT, CRITICAL, ERROR, WARNING, NOTICE, INFO, DEBUG;
@@ -1051,7 +1066,10 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             Log.d(TAG, message);
         }
     }
+    /// END ---------------------------- LOGGING  --------------------------------------
 
+
+    /// START ---------------------------- SEND NATIVE INSTRUCTIONS TO DART  --------------------------------------
     private void invokeMethodUIThread(final String name, final byte[] byteArray)
     {
         activity.runOnUiThread(
@@ -1062,6 +1080,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                     }
                 });
     }
+    /// END ---------------------------- SEND NATIVE INSTRUCTIONS TO DART  --------------------------------------
 
     // BluetoothDeviceCache contains any other cached information not stored in Android Bluetooth API
     // but still needed Dart side.
