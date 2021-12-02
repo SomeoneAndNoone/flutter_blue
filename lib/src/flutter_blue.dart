@@ -123,12 +123,12 @@ class FlutterBlue {
     List<Guid> withDevices = const [],
     Duration? timeout,
     bool allowDuplicates = false,
-    required String? filterName,
+    required List<String> filterNames,
   }) async* {
     var settings = protos.ScanSettings.create()
       ..androidScanMode = scanMode.value
       ..allowDuplicates = allowDuplicates
-      ..filterDeviceName = filterName ?? ''
+      ..filterDeviceNames.addAll(filterNames)
       ..serviceUuids.addAll(withServices.map((g) => g.toString()).toList());
 
     if (_isScanning.value == true) {
@@ -172,7 +172,7 @@ class FlutterBlue {
         // .where((p) => p.errorCodeIfError == -555)
         .map((p) {
       final result = new ScanResult.fromProto(p);
-      final list = _scanResults.value ?? [];
+      final list = _scanResults.value;
       int index = list.indexOf(result);
       if (index != -1) {
         list[index] = result;
@@ -197,7 +197,7 @@ class FlutterBlue {
     List<Guid> withServices = const [],
     List<Guid> withDevices = const [],
     Duration? timeout,
-    String? filterName,
+    required List<String> filterNames,
     bool allowDuplicates = false,
   }) async {
     await scan(
@@ -206,7 +206,7 @@ class FlutterBlue {
       withDevices: withDevices,
       timeout: timeout,
       allowDuplicates: allowDuplicates,
-      filterName: filterName,
+      filterNames: filterNames,
     ).drain();
     return _scanResults.value;
   }

@@ -898,7 +898,6 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
         if(scanner == null) throw new IllegalStateException("getBluetoothLeScanner() is null. Is the Adapter on?");
         int scanMode = proto.getAndroidScanMode();
         int count = proto.getServiceUuidsCount();
-        String filterName = proto.getFilterDeviceName();
 
         ArrayList<ScanFilter> filters = new ArrayList<>(count);
         for(int i = 0; i < count; i++) {
@@ -907,10 +906,11 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             filters.add(f);
         }
 
-        if(filterName!=null && !filterName.isEmpty()){
+        for(int i = 0; i < proto.getFilterDeviceNamesCount(); i++) {
             filters.add(new ScanFilter.Builder()
-                    .setDeviceName(filterName)
-                    .build());
+                    .setDeviceName(proto.getFilterDeviceNames(i))
+                    .build()
+            );
         }
 
         ScanSettings settings = new ScanSettings.Builder().setScanMode(scanMode).build();

@@ -1,6 +1,6 @@
 ///
 //  Generated code. Do not modify.
-//  source: protos/flutterblue.proto
+//  source: flutterblue.proto
 //
 // @dart = 2.12
 // ignore_for_file: annotate_overrides,camel_case_types,unnecessary_const,non_constant_identifier_names,library_prefixes,unused_import,unused_shown_name,return_of_invalid_type,unnecessary_this,prefer_final_fields
@@ -213,7 +213,7 @@ class ScanSettings extends $pb.GeneratedMessage {
     ..a<$core.int>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'androidScanMode', $pb.PbFieldType.O3)
     ..pPS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'serviceUuids')
     ..aOB(3, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'allowDuplicates')
-    ..aOS(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'filterDeviceName')
+    ..pPS(4, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'filterDeviceNames')
     ..hasRequiredFields = false
   ;
 
@@ -222,7 +222,7 @@ class ScanSettings extends $pb.GeneratedMessage {
     $core.int? androidScanMode,
     $core.Iterable<$core.String>? serviceUuids,
     $core.bool? allowDuplicates,
-    $core.String? filterDeviceName,
+    $core.Iterable<$core.String>? filterDeviceNames,
   }) {
     final _result = create();
     if (androidScanMode != null) {
@@ -234,8 +234,8 @@ class ScanSettings extends $pb.GeneratedMessage {
     if (allowDuplicates != null) {
       _result.allowDuplicates = allowDuplicates;
     }
-    if (filterDeviceName != null) {
-      _result.filterDeviceName = filterDeviceName;
+    if (filterDeviceNames != null) {
+      _result.filterDeviceNames.addAll(filterDeviceNames);
     }
     return _result;
   }
@@ -282,13 +282,7 @@ class ScanSettings extends $pb.GeneratedMessage {
   void clearAllowDuplicates() => clearField(3);
 
   @$pb.TagNumber(4)
-  $core.String get filterDeviceName => $_getSZ(3);
-  @$pb.TagNumber(4)
-  set filterDeviceName($core.String v) { $_setString(3, v); }
-  @$pb.TagNumber(4)
-  $core.bool hasFilterDeviceName() => $_has(3);
-  @$pb.TagNumber(4)
-  void clearFilterDeviceName() => clearField(4);
+  $core.List<$core.String> get filterDeviceNames => $_getList(3);
 }
 
 class ScanResult extends $pb.GeneratedMessage {

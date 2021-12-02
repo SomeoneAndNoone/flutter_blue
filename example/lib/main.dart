@@ -83,6 +83,7 @@ class BluetoothOffScreen extends StatelessWidget {
 class FindDevicesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    List<String> filteredNames = ['Mi Smart Band 4', 'Soter'];
     return Scaffold(
       appBar: AppBar(
         title: Text('Find Devices'),
@@ -106,7 +107,7 @@ class FindDevicesScreen extends StatelessWidget {
       body: RefreshIndicator(
         onRefresh: () => FlutterBlue.instance.startScan(
           timeout: Duration(seconds: 4),
-          filterName: "Soter",
+          filterNames: filteredNames,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -125,7 +126,7 @@ class FindDevicesScreen extends StatelessWidget {
                               initialData: BluetoothDeviceState.disconnected,
                               builder: (c, snapshot) {
                                 if (snapshot.data == BluetoothDeviceState.connected) {
-                                  return RaisedButton(
+                                  return ElevatedButton(
                                     child: Text('OPEN'),
                                     onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                                         builder: (context) => DeviceScreen(device: d))),
@@ -189,7 +190,7 @@ class FindDevicesScreen extends StatelessWidget {
               child: Icon(Icons.search),
               onPressed: () => FlutterBlue.instance.startScan(
                 timeout: Duration(seconds: 10),
-                filterName: 'Soter',
+                filterNames: filteredNames,
               ),
             );
           }
@@ -270,7 +271,7 @@ class DeviceScreen extends StatelessWidget {
                   text = snapshot.data.toString().substring(21).toUpperCase();
                   break;
               }
-              return FlatButton(
+              return ElevatedButton(
                   onPressed: onPressed,
                   child: Text(
                     text,
