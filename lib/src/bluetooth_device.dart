@@ -18,7 +18,7 @@ class BluetoothDevice {
   Stream<bool> get isDiscoveringServices => _isDiscoveringServices.stream;
 
   /// Establishes a connection to the Bluetooth Device.
-  Future<bool> connect({
+  Future<void> connect({
     Duration? timeout,
     bool autoConnect = true,
   }) async {
@@ -34,16 +34,13 @@ class BluetoothDevice {
       });
     }
 
-    try {
-      await FlutterBlue.instance._channel.invokeMethod('connect', request.writeToBuffer());
-    } catch (e) {
-      return false;
-    }
+    await FlutterBlue.instance._channel.invokeMethod('connect', request.writeToBuffer());
+
     await state.firstWhere((s) => s == BluetoothDeviceState.connected);
 
     timer?.cancel();
 
-    return true;
+    return;
   }
 
   /// Cancels connection to the Bluetooth Device
