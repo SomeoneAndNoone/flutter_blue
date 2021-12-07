@@ -301,11 +301,15 @@ class ScanResult {
   ScanResult.fromProto(protos.ScanResult p)
       : device = new BluetoothDevice.fromProto(p.device),
         advertisementData = new AdvertisementData.fromProto(p.advertisementData),
-        rssi = p.rssi;
+        rssi = p.rssi,
+        _errorCode = p.errorCodeIfError;
 
   final BluetoothDevice device;
   final AdvertisementData advertisementData;
   final int rssi;
+  final int _errorCode;
+
+  bool get isError => _errorCode != FlutterBlue.SCAN_NO_ERROR;
 
   @override
   bool operator ==(Object other) =>
