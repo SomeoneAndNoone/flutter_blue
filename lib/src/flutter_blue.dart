@@ -221,9 +221,9 @@ class FlutterBlue {
 
   /// Stops a scan for Bluetooth Low Energy devices
   Future stopScan() async {
-    await _channel.invokeMethod('stopScan');
     _stopScanPill.add(null);
     _isScanning.add(false);
+    await _channel.invokeMethod('stopScan');
   }
 
   /// The list of connected peripherals can include those that are connected

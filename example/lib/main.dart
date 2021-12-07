@@ -8,6 +8,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:flutter_blue_example/widgets.dart';
+import 'package:rxdart/rxdart.dart';
 
 void main() {
   runApp(FlutterBlueApp());
@@ -83,8 +84,8 @@ class BluetoothOffScreen extends StatelessWidget {
 class FindDevicesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    List<String> filteredNames = []; // ['Mi Smart Band 4', 'Soter'];
-    List<String> filteredMacAddresses = ['DA:02:DF:7F:71:92'];
+    List<String> filteredNames = ['Mi Smart Band 4', 'Soter', 'SoterDFU'];
+    List<String> filteredMacAddresses = []; // ['DA:02:DF:7F:71:92'];
     return Scaffold(
       appBar: AppBar(
         title: Text('Find Devices'),
@@ -107,9 +108,10 @@ class FindDevicesScreen extends StatelessWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () => FlutterBlue.instance.startScan(
-            timeout: Duration(seconds: 4),
-            filterNames: filteredNames,
-            filterMacAddresses: filteredMacAddresses),
+          timeout: Duration(seconds: 4),
+          filterNames: filteredNames,
+          filterMacAddresses: filteredMacAddresses,
+        ),
         child: SingleChildScrollView(
           child: Column(
             children: <Widget>[
@@ -144,18 +146,22 @@ class FindDevicesScreen extends StatelessWidget {
                 stream: FlutterBlue.instance.scanResults,
                 initialData: [],
                 builder: (c, snapshot) => Column(
-                  children: snapshot.data!
-                      .map(
-                        (r) => ScanResultTile(
-                          result: r,
-                          onTap: () =>
-                              Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-                            r.device.connect();
-                            return DeviceScreen(device: r.device);
-                          })),
+                  children: snapshot.data!.map(
+                    (r) {
+                      print(
+                          'Got new device: deviceName: ${r.device.name}, advLocalName: ${r.advertisementData.localName}');
+                      return ScanResultTile(
+                        result: r,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) {
+                              return DeviceScreen(device: r.device);
+                            },
+                          ),
                         ),
-                      )
-                      .toList(),
+                      );
+                    },
+                  ).toList(),
                 ),
               ),
               Center(
@@ -189,16 +195,49 @@ class FindDevicesScreen extends StatelessWidget {
           } else {
             return FloatingActionButton(
               child: Icon(Icons.search),
-              onPressed: () => FlutterBlue.instance.startScan(
-                timeout: Duration(seconds: 10),
-                filterNames: filteredNames,
-                filterMacAddresses: filteredMacAddresses,
-              ),
+              onPressed: () {
+                _internalScan(filteredNames, filteredMacAddresses).listen((event) {
+                  print('Khamidjon: event came listening: ${event.device.id.id}');
+                });
+              },
             );
           }
         },
       ),
     );
+  }
+
+  Stream<ScanResult> _internalScan(
+    List<String> filteredNames,
+    List<String> filteredMacAddresses,
+  ) {
+    print('Khamidjon: Started scanning');
+    return FlutterBlue.instance
+        .scan(
+      timeout: Duration(seconds: 10),
+      filterNames: filteredNames,
+      filterMacAddresses: filteredMacAddresses,
+    )
+        .map((event) {
+      print('Khamidjon: new result in map: ${event.device.id}');
+      return event;
+    }).switchMap((ScanResult result) async* {
+      print('Khamidjon: got result: ${result.device.id.id}');
+      if (result.device.id.id.toUpperCase() == 'DA:02:DF:7F:71:92') {
+        print('Khamidjon: stopping scan');
+        FlutterBlue.instance.stopScan();
+        print('Khamidjon: restarting adapter');
+        await Future.delayed(Duration(seconds: 1));
+        FlutterBlue.instance.disableAdapter();
+        await Future.delayed(Duration(seconds: 1));
+        FlutterBlue.instance.enableAdapter();
+        await Future.delayed(Duration(seconds: 5));
+        print('Khamidjon: starting scan');
+        yield* _internalScan(filteredNames, filteredMacAddresses);
+      } else {
+        yield result;
+      }
+    });
   }
 }
 
