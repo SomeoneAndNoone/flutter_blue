@@ -95,6 +95,11 @@ class FlutterBlue {
     }
   }
 
+  /// if any disconnections, return true
+  /// if there was no any connection before, return false
+  Future<bool> disconnectAllDevices() async =>
+      await _channel.invokeMethod('disconnectAll') ?? false;
+
   Future<BluetoothDevice?> getDeviceIfCached(String macAddress) async {
     print("Trying to get device with mac: $macAddress");
     var buffer = await _channel.invokeMethod('getCachedDevice', macAddress);
@@ -159,6 +164,10 @@ class FlutterBlue {
     required List<String> filterNames,
     required List<String> filterMacAddresses,
   }) async* {
+    bool isAnyDeviceDisconnected = await disconnectAllDevices();
+    if (isAnyDeviceDisconnected) {
+      await Future.delayed(Duration(seconds: 3));
+    }
     var settings = protos.ScanSettings.create()
       ..androidScanMode = scanMode.value
       ..allowDuplicates = allowDuplicates

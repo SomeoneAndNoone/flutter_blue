@@ -22,6 +22,11 @@ class BluetoothDevice {
     Duration? timeout,
     bool autoConnect = false,
   }) async {
+    bool isAnyDisconnection = await FlutterBlue.instance.disconnectAllDevices();
+    if (isAnyDisconnection) {
+      await Future.delayed(Duration(seconds: 2));
+    }
+
     var request = protos.ConnectRequest.create()
       ..remoteId = id.toString()
       ..androidAutoConnect = autoConnect;

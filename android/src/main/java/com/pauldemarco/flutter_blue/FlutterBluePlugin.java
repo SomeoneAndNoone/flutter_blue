@@ -250,8 +250,9 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 boolean resultValue = true;
 
                 if(mBluetoothAdapter.isEnabled()){
-                   resultValue = mBluetoothAdapter.disable();
-                   mDevices.clear();
+                   disconnectAllDevices();
+                    resultValue = mBluetoothAdapter.disable();
+
                    macDeviceScanned.clear();
                 }
 
@@ -360,19 +361,15 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 break;
             }
 
+            case "disconnectAll": {
+                boolean hasAnyDisconnected = disconnectAllDevices();
+                result.success(hasAnyDisconnected);
+                break;
+            }
+
             case "disconnect":
             {
-                String deviceId = (String)call.arguments;
-                BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(deviceId);
-                int state = mBluetoothManager.getConnectionState(device, BluetoothProfile.GATT);
-                BluetoothDeviceCache cache = mDevices.remove(deviceId);
-                if(cache != null) {
-                    BluetoothGatt gattServer = cache.gatt;
-                    gattServer.disconnect();
-                    if(state == BluetoothProfile.STATE_DISCONNECTED) {
-                        gattServer.close();
-                    }
-                }
+                disconnectDevice((String)call.arguments);
                 result.success(null);
                 break;
             }
@@ -679,6 +676,41 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             }
         }
     }
+
+    boolean disconnectAllDevices(){
+        boolean hasAnyDeviceRemoved = false;
+        for (Map.Entry<String, BluetoothDeviceCache> entry : mDevices.entrySet()) {
+            hasAnyDeviceRemoved = true;
+            log(LogLevel.DEBUG, "DISCONNECTING device: " + (String) (devices.get(i).getAddress()));
+
+            BluetoothDeviceCache cache = entry.getValue();
+            BluetoothGatt gattServer = cache.gatt;
+            gattServer.disconnect();
+            gattServer.close();
+        }
+        mDevices.clear();
+
+        List<BluetoothDevice> devices = mBluetoothManager.getConnectedDevices(BluetoothProfile.GATT);
+        for(int i = 0; i < devices.size(); i ++){
+            log(LogLevel.DEBUG, "THERE IS STILL CONNECTED device: " + (String) (devices.get(i).getAddress()));
+        }
+
+        return hasAnyDeviceRemoved;
+    }
+
+    void disconnectDevice(String deviceId){
+        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(deviceId);
+        int state = mBluetoothManager.getConnectionState(device, BluetoothProfile.GATT);
+        BluetoothDeviceCache cache = mDevices.remove(deviceId);
+        if(cache != null) {
+            BluetoothGatt gattServer = cache.gatt;
+            gattServer.disconnect();
+            if(state == BluetoothProfile.STATE_DISCONNECTED) {
+                gattServer.close();
+            }
+        }
+    }
+
     /// END ---------------------------- METHOD CALLS FROM DART --------------------------------------
 
     /// START ---------------------------- SCANNING RELATED METHODS --------------------------------------
@@ -938,6 +970,22 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 if(!mDevices.containsKey(gatt.getDevice().getAddress())) {
                     gatt.close();
                 }
+            }
+
+            if(status == BluetoothGatt.GATT_SUCCESS) {
+                if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    // We successfully connected, proceed with service discovery
+                    log(LogLevel.DEBUG, "Device CONNECTED successfully, mac: " + gatt.getDevice().getAddress());
+                }
+            } else {
+                // An error happened...figure out what happened!
+                // Programmatically disconnected - 0
+                // Device went out of range - 8
+                // Disconnected by device - 19
+                // Issue with bond - 22
+                // Device not found - 133(some phone it gives 62)
+                log(LogLevel.DEBUG, "ERROR happened: BluetoothGatt status: " + status);
+                gatt.close();
             }
             invokeMethodUIThread("DeviceState", ProtoMaker.from(gatt.getDevice(), newState).toByteArray());
         }
