@@ -24,7 +24,18 @@ class ScanResultTile extends StatelessWidget {
           Text(
             result.device.id.toString(),
             style: Theme.of(context).textTheme.caption,
-          )
+          ),
+          StreamBuilder(
+            stream: result.device.state,
+            builder: (c, snapshot) {
+              return Text(
+                snapshot.data.toString(),
+                style: TextStyle(color: Colors.black),
+                overflow: TextOverflow.ellipsis,
+              );
+            },
+          ),
+          SizedBox(height: 10),
         ],
       );
     } else {

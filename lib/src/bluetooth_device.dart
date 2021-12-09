@@ -20,7 +20,7 @@ class BluetoothDevice {
   /// Establishes a connection to the Bluetooth Device.
   Future<void> connect({
     Duration? timeout,
-    bool autoConnect = true,
+    bool autoConnect = false,
   }) async {
     var request = protos.ConnectRequest.create()
       ..remoteId = id.toString()
