@@ -681,10 +681,10 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
         boolean hasAnyDeviceRemoved = false;
         for (Map.Entry<String, BluetoothDeviceCache> entry : mDevices.entrySet()) {
             hasAnyDeviceRemoved = true;
-            log(LogLevel.DEBUG, "DISCONNECTING device: " + (String) (devices.get(i).getAddress()));
-
             BluetoothDeviceCache cache = entry.getValue();
             BluetoothGatt gattServer = cache.gatt;
+            log(LogLevel.DEBUG, "DISCONNECTING device: " + (String) (gattServer.getDevice().getAddress()));
+
             gattServer.disconnect();
             gattServer.close();
         }
@@ -692,7 +692,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         List<BluetoothDevice> devices = mBluetoothManager.getConnectedDevices(BluetoothProfile.GATT);
         for(int i = 0; i < devices.size(); i ++){
-            log(LogLevel.DEBUG, "THERE IS STILL CONNECTED device: " + (String) (devices.get(i).getAddress()));
+            log(LogLevel.DEBUG, "THERE IS STILL CONNECTED device WHY?: " + (String) (devices.get(i).getAddress()));
         }
 
         return hasAnyDeviceRemoved;

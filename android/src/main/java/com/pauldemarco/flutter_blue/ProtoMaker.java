@@ -65,6 +65,9 @@ public class ProtoMaker {
             }
         }
         if(scanRecord != null) {
+            if(scanRecord.getManufacturerSpecificData() == null){
+                return scanResultError(-666);
+            }
             String deviceName = scanRecord.getDeviceName();
             if(deviceName != null) {
                 a.setLocalName(deviceName);

@@ -6,12 +6,19 @@ part of flutter_blue;
 
 class FlutterBlue {
   static const SCAN_NO_ERROR = -555;
+  static const SCAN_RESULT_NOT_FOUND = -666;
+  static const DELAY_TIME = 3;
+
   final MethodChannel _channel = const MethodChannel('$NAMESPACE/methods');
   final EventChannel _stateChannel = const EventChannel('$NAMESPACE/state');
   final StreamController<MethodCall> _methodStreamController =
       new StreamController.broadcast(); // ignore: close_sinks
   Stream<MethodCall> get _methodStream =>
       _methodStreamController.stream; // Used internally to dispatch methods from platform.
+
+  /// if last scan time is less than 3 seconds, wait for 3 seconds
+  DateTime _lastScanTime = DateTime.now().subtract(Duration(hours: 1));
+  DateTime _lastDisconnectTime = DateTime.now().subtract(Duration(hours: 1));
 
   /// Singleton boilerplate
   FlutterBlue._() {
@@ -116,45 +123,18 @@ class FlutterBlue {
     return BluetoothDevice.fromProto(device);
   }
 
-  /// Starts a scan and returns a future that will complete once the scan has finished.
-  ///
-  /// Once a scan is started, call [stopScan] to stop the scan and complete the returned future.
-  ///
-  /// timeout automatically stops the scan after a specified [Duration].
-  ///
-  /// To observe the results while the scan is in progress, listen to the [scanResults] stream,
-  /// or call [scan] instead.
-  ///
-  /// [filterNames] and [filterMacAddresses] should be used carefully. If you use both filters,
-  /// both are applied and all results will be shown. For example, if you search filterName 'MiBand'
-  /// and mac address '...33:A3', both devices will be returned from scan
-  Future startScan({
-    ScanMode scanMode = ScanMode.lowLatency,
-    List<Guid> withServices = const [],
-    List<Guid> withDevices = const [],
-    Duration? timeout,
-    required List<String> filterNames,
-    required List<String> filterMacAddresses,
-    bool allowDuplicates = false,
-  }) async {
-    await scan(
-      scanMode: scanMode,
-      withServices: withServices,
-      withDevices: withDevices,
-      timeout: timeout,
-      allowDuplicates: allowDuplicates,
-      filterNames: filterNames,
-      filterMacAddresses: filterMacAddresses,
-    ).drain();
-    return _scanResults.value;
-  }
-
   /// Starts a scan for Bluetooth Low Energy devices and returns a stream
   /// of the [ScanResult] results as they are received.
   ///
   /// timeout calls stopStream after a specified [Duration].
   /// You can also get a list of ongoing results in the [scanResults] stream.
   /// If scanning is already in progress, this will throw an [Exception].
+  ///
+  ///
+  /// [filterNames] and [filterMacAddresses] should be used carefully. If you use both filters,
+  /// both are applied and all results will be shown. For example, if you search filterName 'MiBand'
+  /// and mac address '...33:A3', both devices will be returned from scan
+
   Stream<ScanResult> scan({
     ScanMode scanMode = ScanMode.lowLatency,
     List<Guid> withServices = const [],
@@ -164,8 +144,11 @@ class FlutterBlue {
     required List<String> filterNames,
     required List<String> filterMacAddresses,
   }) async* {
+    int emptyScanResultCount = 0;
+
     bool isAnyDeviceDisconnected = await disconnectAllDevices();
     if (isAnyDeviceDisconnected) {
+      _lastDisconnectTime = DateTime.now();
       await Future.delayed(Duration(seconds: 3));
     }
     var settings = protos.ScanSettings.create()
@@ -212,9 +195,16 @@ class FlutterBlue {
         print('ScanResult ERROR: errorCode: ${p.errorCodeIfError}');
       }
       return p;
-    })
-        // .where((p) => p.errorCodeIfError == -555)
-        .map((p) {
+    }).where((p) {
+      /// if there are 3 consequent empty scans, send error to be handled
+      bool isEmpty = p.errorCodeIfError == SCAN_RESULT_NOT_FOUND;
+      if (isEmpty) {
+        emptyScanResultCount++;
+      } else {
+        emptyScanResultCount = 0;
+      }
+      return !isEmpty || emptyScanResultCount > 3;
+    }).map((p) {
       final result = new ScanResult.fromProto(p);
       final list = _scanResults.value;
       int index = list.indexOf(result);
@@ -230,6 +220,9 @@ class FlutterBlue {
 
   /// Stops a scan for Bluetooth Low Energy devices
   Future stopScan() async {
+    if (_isScanning.value) {
+      _lastScanTime = DateTime.now();
+    }
     _stopScanPill.add(null);
     _isScanning.add(false);
     await _channel.invokeMethod('stopScan');
@@ -318,7 +311,9 @@ class ScanResult {
   final int rssi;
   final int errorCode;
 
-  bool get isError => errorCode != FlutterBlue.SCAN_NO_ERROR;
+  bool get isScanError => errorCode != FlutterBlue.SCAN_NO_ERROR;
+
+  bool get isEmptyScanResultError => errorCode == FlutterBlue.SCAN_RESULT_NOT_FOUND;
 
   @override
   bool operator ==(Object other) =>

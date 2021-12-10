@@ -233,10 +233,10 @@ class FindDevicesScreen extends StatelessWidget {
       return event;
     }).switchMap((ScanResult result) async* {
       print('Khamidjon: got result: ${result.device.id.id}');
-      if (result.isError) {
+      if (result.isScanError) {
         print('Khamidjon: ERROR: code: ${result.errorCode}');
       }
-      if (result.isError) {
+      if (result.isScanError) {
         print('Khamidjon: scan depth: $scanDepth');
         if (scanDepth > 3) {
           print('Khamidjon: returning error: scanDepth: $scanDepth');
