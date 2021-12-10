@@ -6,6 +6,7 @@ library flutter_blue;
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart';

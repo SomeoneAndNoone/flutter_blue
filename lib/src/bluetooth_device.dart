@@ -22,10 +22,9 @@ class BluetoothDevice {
     Duration? timeout,
     bool autoConnect = false,
   }) async {
-    bool isAnyDisconnection = await FlutterBlue.instance.disconnectAllDevices();
-    if (isAnyDisconnection) {
-      await Future.delayed(Duration(seconds: 2));
-    }
+    await FlutterBlue.instance.disconnectAllDevices();
+
+    await Future.delayed(FlutterBlue.waitDisconnectTime);
 
     var request = protos.ConnectRequest.create()
       ..remoteId = id.toString()
@@ -34,7 +33,7 @@ class BluetoothDevice {
     Timer? timer;
     if (timeout != null) {
       timer = Timer(timeout, () {
-        disconnect();
+        FlutterBlue.instance.disconnectAllDevices();
         throw TimeoutException('Failed to connect in time.', timeout);
       });
     }
@@ -49,7 +48,7 @@ class BluetoothDevice {
   }
 
   /// Cancels connection to the Bluetooth Device
-  Future disconnect() => FlutterBlue.instance._channel.invokeMethod('disconnect', id.toString());
+  // Future disconnect() => FlutterBlue.instance._channel.invokeMethod('disconnect', id.toString());
 
   BehaviorSubject<List<BluetoothService>> _services = BehaviorSubject.seeded([]);
 

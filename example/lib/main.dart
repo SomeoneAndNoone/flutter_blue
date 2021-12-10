@@ -83,7 +83,7 @@ class BluetoothOffScreen extends StatelessWidget {
 class FindDevicesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    List<String> filteredNames = ['Mi Smart Band 4', 'Soter', 'SoterDFU'];
+    List<String> filteredNames = []; // ['Mi Smart Band 4', 'Soter', 'SoterDFU'];
     List<String> filteredMacAddresses = []; // ['DA:02:DF:7F:71:92'];
     return Scaffold(
       appBar: AppBar(
@@ -233,6 +233,9 @@ class FindDevicesScreen extends StatelessWidget {
       return event;
     }).switchMap((ScanResult result) async* {
       print('Khamidjon: got result: ${result.device.id.id}');
+      if (result.isEmptyScanResultError) {
+        print('EMPTY SCAN RESULT ERROR');
+      }
       if (result.isScanError) {
         print('Khamidjon: ERROR: code: ${result.errorCode}');
       }

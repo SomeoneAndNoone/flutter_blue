@@ -6,7 +6,7 @@ part of flutter_blue;
 
 class FlutterBlue {
   static const SCAN_NO_ERROR = -555;
-  static const SCAN_RESULT_NOT_FOUND = -666;
+  static const SCAN_RESULT_EMPTY = -666;
   static const DELAY_TIME = 3;
 
   final MethodChannel _channel = const MethodChannel('$NAMESPACE/methods');
@@ -33,6 +33,30 @@ class FlutterBlue {
 
   static FlutterBlue get instance => _instance;
 
+  static Duration get waitDisconnectTime {
+    int delay = max(
+      0,
+      FlutterBlue.DELAY_TIME -
+          (DateTime.now().millisecondsSinceEpoch -
+                  FlutterBlue.instance._lastDisconnectTime.millisecondsSinceEpoch) ~/
+              1000,
+    );
+    print('Delaying $delay seconds');
+    return Duration(seconds: delay);
+  }
+
+  static Duration get waitScanTime {
+    int delay = max(
+      0,
+      FlutterBlue.DELAY_TIME -
+          (DateTime.now().millisecondsSinceEpoch -
+                  FlutterBlue.instance._lastScanTime.millisecondsSinceEpoch) ~/
+              1000,
+    );
+    print('Delaying $delay seconds');
+    return Duration(seconds: delay);
+  }
+
   /// Log level of the instance, default is all messages (debug).
   LogLevel _logLevel = LogLevel.debug;
 
@@ -52,7 +76,7 @@ class FlutterBlue {
     await disableAdapter();
     await Future.delayed(Duration(seconds: 1));
     while (await enableAdapter()) {}
-    await Future.delayed(Duration(seconds: 1));
+    await Future.delayed(Duration(seconds: 5));
     return true;
   }
 
@@ -104,8 +128,13 @@ class FlutterBlue {
 
   /// if any disconnections, return true
   /// if there was no any connection before, return false
-  Future<bool> disconnectAllDevices() async =>
-      await _channel.invokeMethod('disconnectAll') ?? false;
+  Future<bool> disconnectAllDevices() async {
+    bool isAnyDisconnection = await _channel.invokeMethod('disconnectAll') ?? false;
+    if (isAnyDisconnection) {
+      _lastDisconnectTime = DateTime.now();
+    }
+    return isAnyDisconnection;
+  }
 
   Future<BluetoothDevice?> getDeviceIfCached(String macAddress) async {
     print("Trying to get device with mac: $macAddress");
@@ -146,11 +175,18 @@ class FlutterBlue {
   }) async* {
     int emptyScanResultCount = 0;
 
-    bool isAnyDeviceDisconnected = await disconnectAllDevices();
-    if (isAnyDeviceDisconnected) {
-      _lastDisconnectTime = DateTime.now();
-      await Future.delayed(Duration(seconds: 3));
-    }
+    await disconnectAllDevices();
+
+    // after disconnecting wait a few seconds to connect
+    await Future.delayed(
+      Duration(
+        seconds: max(
+          waitDisconnectTime.inSeconds,
+          waitScanTime.inSeconds,
+        ),
+      ),
+    );
+
     var settings = protos.ScanSettings.create()
       ..androidScanMode = scanMode.value
       ..allowDuplicates = allowDuplicates
@@ -196,14 +232,17 @@ class FlutterBlue {
       }
       return p;
     }).where((p) {
-      /// if there are 3 consequent empty scans, send error to be handled
-      bool isEmpty = p.errorCodeIfError == SCAN_RESULT_NOT_FOUND;
+      // todo test functionality
+      /// if there are more than 3 consequent empty ScanResult, send error to be handled
+      bool isEmpty = p.errorCodeIfError == SCAN_RESULT_EMPTY;
+      print(
+          'Khamidjon: isEmpty: $isEmpty, deviceName: ${p.device.name}, emptyScanResultCount: $emptyScanResultCount');
       if (isEmpty) {
         emptyScanResultCount++;
       } else {
         emptyScanResultCount = 0;
       }
-      return !isEmpty || emptyScanResultCount > 3;
+      return !isEmpty || emptyScanResultCount > 2;
     }).map((p) {
       final result = new ScanResult.fromProto(p);
       final list = _scanResults.value;
@@ -313,7 +352,7 @@ class ScanResult {
 
   bool get isScanError => errorCode != FlutterBlue.SCAN_NO_ERROR;
 
-  bool get isEmptyScanResultError => errorCode == FlutterBlue.SCAN_RESULT_NOT_FOUND;
+  bool get isEmptyScanResultError => errorCode == FlutterBlue.SCAN_RESULT_EMPTY;
 
   @override
   bool operator ==(Object other) =>
