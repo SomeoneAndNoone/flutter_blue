@@ -68,15 +68,23 @@ class FlutterBlue {
   /// Checks if Bluetooth functionality is turned on
   Future<bool> get isOn => _channel.invokeMethod('isOn').then<bool>((d) => d);
 
-  Future<bool> enableAdapter() => _channel.invokeMethod('enableAdapter').then<bool>((d) => d);
+  Future<bool> enableAdapter({int delayInSeconds = 5}) async {
+    if (await isOn) {
+      return true;
+    }
+    bool result = await _channel.invokeMethod('enableAdapter').then<bool>((d) => d);
+    // after enabling adapter wait for 4 seconds
+    Future.delayed(Duration(seconds: delayInSeconds));
+
+    return result;
+  }
 
   Future<bool> disableAdapter() => _channel.invokeMethod('disableAdapter').then<bool>((d) => d);
 
-  Future<bool> restartBluetooth() async {
+  Future<bool> restartBluetooth({int delayAfterEnable = 5}) async {
     await disableAdapter();
     await Future.delayed(Duration(seconds: 1));
-    while (await enableAdapter()) {}
-    await Future.delayed(Duration(seconds: 5));
+    while (await enableAdapter(delayInSeconds: delayAfterEnable)) {}
     return true;
   }
 
@@ -164,6 +172,11 @@ class FlutterBlue {
   /// both are applied and all results will be shown. For example, if you search filterName 'MiBand'
   /// and mac address '...33:A3', both devices will be returned from scan
 
+  static Future _wait(int seconds) async {
+    print('DELAYING $seconds seconds');
+    await Future.delayed(Duration(seconds: seconds));
+  }
+
   Stream<ScanResult> scan({
     ScanMode scanMode = ScanMode.lowLatency,
     List<Guid> withServices = const [],
@@ -175,17 +188,12 @@ class FlutterBlue {
   }) async* {
     int emptyScanResultCount = 0;
 
+    await enableAdapter(delayInSeconds: 3);
+
     await disconnectAllDevices();
 
     // after disconnecting wait a few seconds to connect
-    await Future.delayed(
-      Duration(
-        seconds: max(
-          waitDisconnectTime.inSeconds,
-          waitScanTime.inSeconds,
-        ),
-      ),
-    );
+    await _wait(max(waitDisconnectTime.inSeconds, waitScanTime.inSeconds));
 
     var settings = protos.ScanSettings.create()
       ..androidScanMode = scanMode.value
@@ -266,14 +274,6 @@ class FlutterBlue {
     _isScanning.add(false);
     await _channel.invokeMethod('stopScan');
   }
-
-  /// The list of connected peripherals can include those that are connected
-  /// by other apps and that will need to be connected locally using the
-  /// device.connect() method before they can be used.
-//  Stream<List<BluetoothDevice>> connectedDevices({
-//    List<Guid> withServices = const [],
-//  }) =>
-//      throw UnimplementedError();
 
   Future<bool?> startAdvertising(final Uint8List manufacturerData) {
     return _channel.invokeMethod<bool>('startAdvertising', manufacturerData);
