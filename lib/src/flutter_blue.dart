@@ -7,7 +7,7 @@ part of flutter_blue;
 class FlutterBlue {
   static const SCAN_NO_ERROR = -555;
   static const SCAN_RESULT_EMPTY = -666;
-  static const DELAY_TIME_IN_SECONDS = 3;
+  static const DELAY_TIME_IN_SECONDS = 4;
 
   final MethodChannel _channel = const MethodChannel('$NAMESPACE/methods');
   final EventChannel _stateChannel = const EventChannel('$NAMESPACE/state');
@@ -41,7 +41,6 @@ class FlutterBlue {
                   FlutterBlue.instance._lastDisconnectTime.millisecondsSinceEpoch) ~/
               1000),
     );
-    print('Delaying $delay seconds');
     return Duration(seconds: delay);
   }
 
@@ -53,7 +52,6 @@ class FlutterBlue {
                   FlutterBlue.instance._lastStopScanTime.millisecondsSinceEpoch) ~/
               1000),
     );
-    print('Delaying $delay seconds');
     return Duration(seconds: delay);
   }
 
@@ -140,6 +138,7 @@ class FlutterBlue {
   Future<bool> disconnectAllDevices() async {
     bool isAnyDisconnection = await _channel.invokeMethod('disconnectAll') ?? false;
     if (isAnyDisconnection) {
+      print('SOME DEVICES DISCONNECTED');
       _lastDisconnectTime = DateTime.now();
     }
     return isAnyDisconnection;

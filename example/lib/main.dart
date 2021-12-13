@@ -121,7 +121,7 @@ class FindDevicesScreen extends StatelessWidget {
                           result: r,
                           onTap: () async {
                             // todo khamidjon connect
-                            print('CONNECTING TRYING. DEVICE: ${r.device.id.id}');
+                            print('CONNECTION TRYING. DEVICE: ${r.device.id.id}');
                             await r.device.connect(autoConnect: false);
                             print('CONNECTED DEVCIE: ${r.device.id.id}');
                           },

@@ -28,7 +28,7 @@ class BluetoothDevice {
 
     await FlutterBlue._waitReleaseResources();
 
-    print('TRUELY TRYING TO CONNECECT AFTER DELAY');
+    print('TRUELY TRYING TO CONNECT AFTER DELAY');
 
     var request = protos.ConnectRequest.create()
       ..remoteId = id.toString()
