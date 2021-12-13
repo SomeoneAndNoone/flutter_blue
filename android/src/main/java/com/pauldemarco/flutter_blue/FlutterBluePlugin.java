@@ -151,7 +151,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             final PluginRegistry.Registrar registrar,
             final ActivityPluginBinding activityBinding) {
         synchronized (initializationLock) {
-            Log.i(TAG, "setup");
+            Log.i(TAG, "FlutterBlue in Native: setup");
             this.activity = activity;
             this.application = application;
             this.context = application;
@@ -172,7 +172,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     }
 
     private void tearDown() {
-        Log.i(TAG, "teardown");
+        Log.i(TAG, "FlutterBlue in Native: teardown");
         context = null;
         activityBinding.removeRequestPermissionsResultListener(this);
         activityBinding = null;
@@ -317,8 +317,8 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                     p.addDevices(ProtoMaker.from(d));
                 }
                 result.success(p.build().toByteArray());
-                log(LogLevel.EMERGENCY, "Connected devices count in BluetoothManager: " + devices.size());
-                log(LogLevel.EMERGENCY, "Connected devices count in cache: " + mDevices.size());
+                log(LogLevel.EMERGENCY, "FlutterBlue in Native: Connected devices count in BluetoothManager: " + devices.size());
+                log(LogLevel.EMERGENCY, "FlutterBlue in Native: Connected devices count in cache: " + mDevices.size());
                 break;
             }
 
@@ -683,7 +683,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             hasAnyDeviceRemoved = true;
             BluetoothDeviceCache cache = entry.getValue();
             BluetoothGatt gattServer = cache.gatt;
-            log(LogLevel.DEBUG, "DISCONNECTING device: " + (String) (gattServer.getDevice().getAddress()));
+            log(LogLevel.DEBUG, "FlutterBlue in Native: DISCONNECTING device: " + (String) (gattServer.getDevice().getAddress()));
 
             gattServer.disconnect();
             gattServer.close();
@@ -692,7 +692,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         List<BluetoothDevice> devices = mBluetoothManager.getConnectedDevices(BluetoothProfile.GATT);
         for(int i = 0; i < devices.size(); i ++){
-            log(LogLevel.DEBUG, "THERE IS STILL CONNECTED device WHY?: " + (String) (devices.get(i).getAddress()));
+            log(LogLevel.DEBUG, "FlutterBlue in Native: THERE IS STILL CONNECTED device WHY?: " + (String) (devices.get(i).getAddress()));
         }
 
         return hasAnyDeviceRemoved;
@@ -861,12 +861,12 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     private AdvertiseCallback mAdvertiseCallback = new AdvertiseCallback() {
         @Override
         public void onStartSuccess(AdvertiseSettings settingsInEffect) {
-            Log.d(TAG, "Peripheral advertising started");
+            Log.d(TAG, "FlutterBlue in Native: Peripheral advertising started");
         }
 
         @Override
         public void onStartFailure(int errorCode) {
-            Log.d(TAG, "Peripheral advertising failed: " + errorCode);
+            Log.d(TAG, "FlutterBlue in Native: Peripheral advertising failed: " + errorCode);
         }
     };
     /// END ---------------------------- ADVERTISING RELATED METHODS --------------------------------------
@@ -965,7 +965,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            log(LogLevel.DEBUG, "[onConnectionStateChange] status: " + status + " newState: " + newState);
+            log(LogLevel.DEBUG, "FlutterBlue in Native: [onConnectionStateChange] status: " + status + " newState: " + newState);
             if(newState == BluetoothProfile.STATE_DISCONNECTED) {
                 if(!mDevices.containsKey(gatt.getDevice().getAddress())) {
                     gatt.close();
@@ -975,7 +975,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             if(status == BluetoothGatt.GATT_SUCCESS) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     // We successfully connected, proceed with service discovery
-                    log(LogLevel.DEBUG, "Device CONNECTED successfully, mac: " + gatt.getDevice().getAddress());
+                    log(LogLevel.DEBUG, "FlutterBlue in Native: Device CONNECTED successfully, mac: " + gatt.getDevice().getAddress());
                 }
             } else {
                 // An error happened...figure out what happened!
@@ -984,7 +984,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 // Disconnected by device - 19
                 // Issue with bond - 22
                 // Device not found - 133(some phone it gives 62)
-                log(LogLevel.DEBUG, "ERROR happened: BluetoothGatt status: " + status);
+                log(LogLevel.DEBUG, "FlutterBlue in Native: ERROR happened: BluetoothGatt status: " + status);
                 gatt.close();
             }
             invokeMethodUIThread("DeviceState", ProtoMaker.from(gatt.getDevice(), newState).toByteArray());
@@ -992,7 +992,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-            log(LogLevel.DEBUG, "[onServicesDiscovered] count: " + gatt.getServices().size() + " status: " + status);
+            log(LogLevel.DEBUG, "FlutterBlue in Native: [onServicesDiscovered] count: " + gatt.getServices().size() + " status: " + status);
             Protos.DiscoverServicesResult.Builder p = Protos.DiscoverServicesResult.newBuilder();
             p.setRemoteId(gatt.getDevice().getAddress());
             for(BluetoothGattService s : gatt.getServices()) {
@@ -1003,7 +1003,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         @Override
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            log(LogLevel.DEBUG, "[onCharacteristicRead] uuid: " + characteristic.getUuid().toString() + " status: " + status);
+            log(LogLevel.DEBUG, "FlutterBlue in Native: [onCharacteristicRead] uuid: " + characteristic.getUuid().toString() + " status: " + status);
             Protos.ReadCharacteristicResponse.Builder p = Protos.ReadCharacteristicResponse.newBuilder();
             p.setRemoteId(gatt.getDevice().getAddress());
             p.setCharacteristic(ProtoMaker.from(gatt.getDevice(), characteristic, gatt));
@@ -1012,7 +1012,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            log(LogLevel.DEBUG, "[onCharacteristicWrite] uuid: " + characteristic.getUuid().toString() + " status: " + status);
+            log(LogLevel.DEBUG, "FlutterBlue in Native: [onCharacteristicWrite] uuid: " + characteristic.getUuid().toString() + " status: " + status);
             Protos.WriteCharacteristicRequest.Builder request = Protos.WriteCharacteristicRequest.newBuilder();
             request.setRemoteId(gatt.getDevice().getAddress());
             request.setCharacteristicUuid(characteristic.getUuid().toString());
@@ -1025,7 +1025,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            log(LogLevel.DEBUG, "[onCharacteristicChanged] uuid: " + characteristic.getUuid().toString());
+            log(LogLevel.DEBUG, "FlutterBlue in Native: [onCharacteristicChanged] uuid: " + characteristic.getUuid().toString());
             Protos.OnCharacteristicChanged.Builder p = Protos.OnCharacteristicChanged.newBuilder();
             p.setRemoteId(gatt.getDevice().getAddress());
             p.setCharacteristic(ProtoMaker.from(gatt.getDevice(), characteristic, gatt));
@@ -1034,7 +1034,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         @Override
         public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-            log(LogLevel.DEBUG, "[onDescriptorRead] uuid: " + descriptor.getUuid().toString() + " status: " + status);
+            log(LogLevel.DEBUG, "FlutterBlue in Native: [onDescriptorRead] uuid: " + descriptor.getUuid().toString() + " status: " + status);
             // Rebuild the ReadAttributeRequest and send back along with response
             Protos.ReadDescriptorRequest.Builder q = Protos.ReadDescriptorRequest.newBuilder();
             q.setRemoteId(gatt.getDevice().getAddress());
@@ -1062,7 +1062,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         @Override
         public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-            log(LogLevel.DEBUG, "[onDescriptorWrite] uuid: " + descriptor.getUuid().toString() + " status: " + status);
+            log(LogLevel.DEBUG, "FlutterBlue in Native: [onDescriptorWrite] uuid: " + descriptor.getUuid().toString() + " status: " + status);
             Protos.WriteDescriptorRequest.Builder request = Protos.WriteDescriptorRequest.newBuilder();
             request.setRemoteId(gatt.getDevice().getAddress());
             request.setDescriptorUuid(descriptor.getUuid().toString());
@@ -1084,17 +1084,17 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         @Override
         public void onReliableWriteCompleted(BluetoothGatt gatt, int status) {
-            log(LogLevel.DEBUG, "[onReliableWriteCompleted] status: " + status);
+            log(LogLevel.DEBUG, "FlutterBlue in Native: [onReliableWriteCompleted] status: " + status);
         }
 
         @Override
         public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
-            log(LogLevel.DEBUG, "[onReadRemoteRssi] rssi: " + rssi + " status: " + status);
+            log(LogLevel.DEBUG, "FlutterBlue in Native: [onReadRemoteRssi] rssi: " + rssi + " status: " + status);
         }
 
         @Override
         public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
-            log(LogLevel.DEBUG, "[onMtuChanged] mtu: " + mtu + " status: " + status);
+            log(LogLevel.DEBUG, "FlutterBlue in Native: [onMtuChanged] mtu: " + mtu + " status: " + status);
             if(status == BluetoothGatt.GATT_SUCCESS) {
                 if(mDevices.containsKey(gatt.getDevice().getAddress())) {
                     BluetoothDeviceCache cache = mDevices.get(gatt.getDevice().getAddress());

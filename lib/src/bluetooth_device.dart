@@ -22,13 +22,13 @@ class BluetoothDevice {
     Duration? timeout,
     bool autoConnect = false,
   }) async {
-    print('START CONNECTION BEFORE DELAY');
+    print('FlutterBlue: START CONNECTION BEFORE DELAY');
 
     await FlutterBlue.instance.disconnectAllDevices();
 
     await FlutterBlue._waitReleaseResources();
 
-    print('TRUELY TRYING TO CONNECT AFTER DELAY');
+    print('FlutterBlue: TRUELY TRYING TO CONNECT AFTER DELAY');
 
     var request = protos.ConnectRequest.create()
       ..remoteId = id.toString()

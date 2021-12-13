@@ -202,9 +202,9 @@ class FindDevicesScreen extends StatelessWidget {
               child: Icon(Icons.search),
               onPressed: () {
                 _internalScan(filteredNames, filteredMacAddresses).listen((event) {
-                  print('Khamidjon: event came listening: ${event.device.id.id}');
+                  print('FlutterBlue: event came listening: ${event.device.id.id}');
                 }).onError((error) {
-                  print('Khamidjon: error in listener: $error');
+                  print('FlutterBlue: error in listener: $error');
                 });
               },
             );
@@ -220,7 +220,7 @@ class FindDevicesScreen extends StatelessWidget {
     int scanDepth = 0,
   }) {
     print(
-        'Khamidjon: Started scanning, scanDepth: $scanDepth, filterNames: $filteredNames, filterMacs: $filteredMacAddresses');
+        'FlutterBlue: Started scanning, scanDepth: $scanDepth, filterNames: $filteredNames, filterMacs: $filteredMacAddresses');
     return FlutterBlue.instance
         .scan(
       timeout: Duration(hours: 24),
@@ -228,38 +228,38 @@ class FindDevicesScreen extends StatelessWidget {
       filterMacAddresses: filteredMacAddresses,
     )
         .map((event) {
-      print('Khamidjon: new result in map: ${event.device.id}');
+      print('FlutterBlue: new result in map: ${event.device.id}');
       return event;
     }).switchMap((ScanResult result) async* {
-      print('Khamidjon: got result: ${result.device.id.id}');
+      print('FlutterBlue: got result: ${result.device.id.id}');
       if (result.isEmptyScanResultError) {
         print('EMPTY SCAN RESULT ERROR');
       }
       if (result.isScanError) {
-        print('Khamidjon: ERROR: code: ${result.errorCode}');
+        print('FlutterBlue: ERROR: code: ${result.errorCode}');
       }
       if (result.isScanError) {
-        print('Khamidjon: scan depth: $scanDepth');
+        print('FlutterBlue: scan depth: $scanDepth');
         if (scanDepth > 3) {
-          print('Khamidjon: returning error: scanDepth: $scanDepth');
+          print('FlutterBlue: returning error: scanDepth: $scanDepth');
           yield* Stream<ScanResult>.error(Exception('Khamidjon: scanDepth: $scanDepth'));
         } else {
-          print('Khamidjon: stopping scan');
+          print('FlutterBlue: stopping scan');
           FlutterBlue.instance.stopScan();
-          print('Khamidjon: restarting adapter');
+          print('FlutterBlue: restarting adapter');
           await Future.delayed(Duration(seconds: 1));
           FlutterBlue.instance.disableAdapter();
           await Future.delayed(Duration(seconds: 1));
           FlutterBlue.instance.enableAdapter();
           await Future.delayed(Duration(seconds: 5));
-          print('Khamidjon: starting scan');
+          print('FlutterBlue: starting scan');
           yield* _internalScan(filteredNames, filteredMacAddresses, scanDepth: scanDepth + 1);
         }
       } else {
         yield result;
       }
     }).doOnError((object, stackTrace) {
-      print('Khamidjon: Stream error: $object');
+      print('FlutterBlue: Stream error: $object');
     });
   }
 }

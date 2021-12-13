@@ -138,14 +138,14 @@ class FlutterBlue {
   Future<bool> disconnectAllDevices() async {
     bool isAnyDisconnection = await _channel.invokeMethod('disconnectAll') ?? false;
     if (isAnyDisconnection) {
-      print('SOME DEVICES DISCONNECTED');
+      print('FlutterBlue: SOME DEVICES DISCONNECTED');
       _lastDisconnectTime = DateTime.now();
     }
     return isAnyDisconnection;
   }
 
   Future<BluetoothDevice?> getDeviceIfCached(String macAddress) async {
-    print("Trying to get device with mac: $macAddress");
+    print("FlutterBlue: Trying to get device: getDeviceIfCached");
     var buffer = await _channel.invokeMethod('getCachedDevice', macAddress);
     if (buffer == null) {
       return null;
@@ -177,7 +177,7 @@ class FlutterBlue {
       waitDisconnectTime.inSeconds,
       waitScanTime.inSeconds,
     );
-    print('DELAYING $delay seconds');
+    print('FlutterBlue: DELAYING $delay seconds');
     await Future.delayed(Duration(seconds: delay));
   }
 
@@ -190,7 +190,7 @@ class FlutterBlue {
     required List<String> filterNames,
     required List<String> filterMacAddresses,
   }) async* {
-    print('START SCAN METHOD BEFORE DELAYS');
+    print('FlutterBlue: START SCAN METHOD BEFORE DELAYS');
     int emptyScanResultCount = 0;
 
     await enableAdapter(delayIfToggledInSeconds: 3);
@@ -200,7 +200,7 @@ class FlutterBlue {
     // after disconnecting/scanning wait a few seconds to release resources
     await _waitReleaseResources();
 
-    print('STARTED SCAN TRUELY AFTER WAIT');
+    print('FlutterBlue: STARTED SCAN TRUELY AFTER WAIT');
 
     var settings = protos.ScanSettings.create()
       ..androidScanMode = scanMode.value
@@ -230,10 +230,10 @@ class FlutterBlue {
     try {
       await _channel.invokeMethod('startScan', settings.writeToBuffer());
     } catch (e) {
-      print('Error starting scan.');
+      print('FlutterBlue: Error starting scan.');
       _stopScanPill.add(null);
       _isScanning.add(false);
-      print('Khamidjon: inside plugin: error: $e');
+      print('FlutterBlue: inside plugin: error: $e');
       throw e;
     }
 
@@ -245,7 +245,7 @@ class FlutterBlue {
         .map((buffer) => new protos.ScanResult.fromBuffer(buffer))
         .map((p) {
       if (p.errorCodeIfError != SCAN_NO_ERROR) {
-        print('ScanResult ERROR: errorCode: ${p.errorCodeIfError}');
+        print('FlutterBlue: ScanResult ERROR: errorCode: ${p.errorCodeIfError}');
       }
       return p;
     }).where((p) {
@@ -253,7 +253,7 @@ class FlutterBlue {
       /// if there are more than 3 consequent empty ScanResult, send error to be handled
       bool isEmpty = p.errorCodeIfError == SCAN_RESULT_EMPTY;
       print(
-          'Khamidjon: isEmpty: $isEmpty, deviceName: ${p.device.name}, emptyScanResultCount: $emptyScanResultCount');
+          'FlutterBlue: isEmpty: $isEmpty, deviceName: ${p.device.name}, emptyScanResultCount: $emptyScanResultCount');
       if (isEmpty) {
         emptyScanResultCount++;
       } else {
