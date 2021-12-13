@@ -122,7 +122,6 @@ class FindDevicesScreen extends StatelessWidget {
                           onTap: () async {
                             // todo khamidjon connect
                             print('CONNECTING TRYING. DEVICE: ${r.device.id.id}');
-                            await r.device.disconnect();
                             await r.device.connect(autoConnect: false);
                             print('CONNECTED DEVCIE: ${r.device.id.id}');
                           },
@@ -172,7 +171,7 @@ class FindDevicesScreen extends StatelessWidget {
                                     return ElevatedButton(
                                       child: Text('DISCONNECT'),
                                       onPressed: () async {
-                                        await d.disconnect();
+                                        await FlutterBlue.instance.disconnectAllDevices();
                                       },
                                     );
                                   }
