@@ -7,7 +7,7 @@ part of flutter_blue;
 class FlutterBlue {
   static const SCAN_NO_ERROR = -555;
   static const SCAN_RESULT_EMPTY = -666;
-  static const DELAY_TIME = 3;
+  static const DELAY_TIME_IN_SECONDS = 3;
 
   final MethodChannel _channel = const MethodChannel('$NAMESPACE/methods');
   final EventChannel _stateChannel = const EventChannel('$NAMESPACE/state');
@@ -17,7 +17,7 @@ class FlutterBlue {
       _methodStreamController.stream; // Used internally to dispatch methods from platform.
 
   /// if last scan time is less than 3 seconds, wait for 3 seconds
-  DateTime _lastScanTime = DateTime.now().subtract(Duration(hours: 1));
+  DateTime _lastStopScanTime = DateTime.now().subtract(Duration(hours: 1));
   DateTime _lastDisconnectTime = DateTime.now().subtract(Duration(hours: 1));
 
   /// Singleton boilerplate
@@ -36,10 +36,10 @@ class FlutterBlue {
   static Duration get waitDisconnectTime {
     int delay = max(
       0,
-      FlutterBlue.DELAY_TIME -
-          (DateTime.now().millisecondsSinceEpoch -
+      FlutterBlue.DELAY_TIME_IN_SECONDS -
+          ((DateTime.now().millisecondsSinceEpoch -
                   FlutterBlue.instance._lastDisconnectTime.millisecondsSinceEpoch) ~/
-              1000,
+              1000),
     );
     print('Delaying $delay seconds');
     return Duration(seconds: delay);
@@ -48,10 +48,10 @@ class FlutterBlue {
   static Duration get waitScanTime {
     int delay = max(
       0,
-      FlutterBlue.DELAY_TIME -
-          (DateTime.now().millisecondsSinceEpoch -
-                  FlutterBlue.instance._lastScanTime.millisecondsSinceEpoch) ~/
-              1000,
+      FlutterBlue.DELAY_TIME_IN_SECONDS -
+          ((DateTime.now().millisecondsSinceEpoch -
+                  FlutterBlue.instance._lastStopScanTime.millisecondsSinceEpoch) ~/
+              1000),
     );
     print('Delaying $delay seconds');
     return Duration(seconds: delay);
@@ -68,13 +68,13 @@ class FlutterBlue {
   /// Checks if Bluetooth functionality is turned on
   Future<bool> get isOn => _channel.invokeMethod('isOn').then<bool>((d) => d);
 
-  Future<bool> enableAdapter({int delayInSeconds = 5}) async {
+  Future<bool> enableAdapter({int delayIfToggledInSeconds = 5}) async {
     if (await isOn) {
       return true;
     }
     bool result = await _channel.invokeMethod('enableAdapter').then<bool>((d) => d);
     // after enabling adapter wait for 4 seconds
-    Future.delayed(Duration(seconds: delayInSeconds));
+    Future.delayed(Duration(seconds: delayIfToggledInSeconds));
 
     return result;
   }
@@ -84,7 +84,8 @@ class FlutterBlue {
   Future<bool> restartBluetooth({int delayAfterEnable = 5}) async {
     await disableAdapter();
     await Future.delayed(Duration(seconds: 1));
-    while (await enableAdapter(delayInSeconds: delayAfterEnable)) {}
+    await enableAdapter(delayIfToggledInSeconds: delayAfterEnable);
+    // while (await enableAdapter(delayInSeconds: delayAfterEnable)) {}
     return true;
   }
 
@@ -172,9 +173,13 @@ class FlutterBlue {
   /// both are applied and all results will be shown. For example, if you search filterName 'MiBand'
   /// and mac address '...33:A3', both devices will be returned from scan
 
-  static Future _wait(int seconds) async {
-    print('DELAYING $seconds seconds');
-    await Future.delayed(Duration(seconds: seconds));
+  static Future _waitReleaseResources() async {
+    int delay = max(
+      waitDisconnectTime.inSeconds,
+      waitScanTime.inSeconds,
+    );
+    print('DELAYING $delay seconds');
+    await Future.delayed(Duration(seconds: delay));
   }
 
   Stream<ScanResult> scan({
@@ -186,21 +191,26 @@ class FlutterBlue {
     required List<String> filterNames,
     required List<String> filterMacAddresses,
   }) async* {
+    print('START SCAN METHOD BEFORE DELAYS');
     int emptyScanResultCount = 0;
 
-    await enableAdapter(delayInSeconds: 3);
+    await enableAdapter(delayIfToggledInSeconds: 3);
 
     await disconnectAllDevices();
 
-    // after disconnecting wait a few seconds to connect
-    await _wait(max(waitDisconnectTime.inSeconds, waitScanTime.inSeconds));
+    // after disconnecting/scanning wait a few seconds to release resources
+    await _waitReleaseResources();
+
+    print('STARTED SCAN TRUELY AFTER WAIT');
 
     var settings = protos.ScanSettings.create()
       ..androidScanMode = scanMode.value
       ..allowDuplicates = allowDuplicates
       ..filterMacAddresses.addAll(filterMacAddresses)
       ..filterDeviceNames.addAll(filterNames)
-      ..serviceUuids.addAll(withServices.map((g) => g.toString()).toList());
+      ..serviceUuids.addAll(
+        withServices.map((g) => g.toString()).toList(),
+      );
 
     if (_isScanning.value == true) {
       throw Exception('Another scan is already in progress.');
@@ -268,7 +278,7 @@ class FlutterBlue {
   /// Stops a scan for Bluetooth Low Energy devices
   Future stopScan() async {
     if (_isScanning.value) {
-      _lastScanTime = DateTime.now();
+      _lastStopScanTime = DateTime.now();
     }
     _stopScanPill.add(null);
     _isScanning.add(false);
