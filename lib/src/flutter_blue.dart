@@ -20,6 +20,26 @@ class FlutterBlue {
   DateTime _lastStopScanTime = DateTime.now().subtract(Duration(hours: 1));
   DateTime _lastDisconnectTime = DateTime.now().subtract(Duration(hours: 1));
 
+  static Function(String log)? _debugLogger;
+  static Function(String log)? _errorLogger;
+
+  static void setLoggers(Function(String) debugLog, Function(String) errorLog) {
+    _debugLogger = debugLog;
+    _errorLogger = errorLog;
+  }
+
+  static void _logD(String log) {
+    if (_debugLogger != null) {
+      _debugLogger!(log);
+    }
+  }
+
+  static void _logE(String log) {
+    if (_errorLogger != null) {
+      _errorLogger!(log);
+    }
+  }
+
   /// Singleton boilerplate
   FlutterBlue._() {
     _channel.setMethodCallHandler((MethodCall call) async {
@@ -177,6 +197,7 @@ class FlutterBlue {
       waitDisconnectTime.inSeconds,
       waitScanTime.inSeconds,
     );
+    _logD('FlutterBlue: DELAYING $delay seconds');
     print('FlutterBlue: DELAYING $delay seconds');
     await Future.delayed(Duration(seconds: delay));
   }
@@ -212,6 +233,7 @@ class FlutterBlue {
       );
 
     if (_isScanning.value == true) {
+      _logE('FlutterBlue:  another scan is already in progress');
       throw Exception('Another scan is already in progress.');
     }
 
@@ -230,9 +252,9 @@ class FlutterBlue {
     try {
       await _channel.invokeMethod('startScan', settings.writeToBuffer());
     } catch (e) {
-      print('FlutterBlue: Error starting scan.');
       _stopScanPill.add(null);
       _isScanning.add(false);
+      _logE('FlutterBlue: scan error inside plugin: $e');
       print('FlutterBlue: inside plugin: error: $e');
       throw e;
     }
@@ -252,6 +274,8 @@ class FlutterBlue {
       // todo test functionality
       /// if there are more than 3 consequent empty ScanResult, send error to be handled
       bool isEmpty = p.errorCodeIfError == SCAN_RESULT_EMPTY;
+      _logE(
+          'FlutterBlue: Empty Scan. deviceName: ${p.device.name}, emptyScanResultCount: $emptyScanResultCount');
       print(
           'FlutterBlue: isEmpty: $isEmpty, deviceName: ${p.device.name}, emptyScanResultCount: $emptyScanResultCount');
       if (isEmpty) {

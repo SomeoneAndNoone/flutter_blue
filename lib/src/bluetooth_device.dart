@@ -28,6 +28,7 @@ class BluetoothDevice {
 
     await FlutterBlue._waitReleaseResources();
 
+    FlutterBlue._logD('FlutterBlue: trying to connect to device(${id.id}');
     print('FlutterBlue: TRUELY TRYING TO CONNECT AFTER DELAY');
 
     var request = protos.ConnectRequest.create()
@@ -38,6 +39,7 @@ class BluetoothDevice {
     if (timeout != null) {
       timer = Timer(timeout, () {
         FlutterBlue.instance.disconnectAllDevices();
+        FlutterBlue._logE('FlutterBlue: Failed to connect to device on time: ${id.id}');
         throw TimeoutException('Failed to connect in time.', timeout);
       });
     }
