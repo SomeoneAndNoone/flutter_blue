@@ -274,12 +274,13 @@ class FlutterBlue {
       // todo test functionality
       /// if there are more than 3 consequent empty ScanResult, send error to be handled
       bool isEmpty = p.errorCodeIfError == SCAN_RESULT_EMPTY;
-      _logE(
-          'FlutterBlue: Empty Scan. deviceName: ${p.device.name}, emptyScanResultCount: $emptyScanResultCount');
+
       print(
           'FlutterBlue: isEmpty: $isEmpty, deviceName: ${p.device.name}, emptyScanResultCount: $emptyScanResultCount');
       if (isEmpty) {
         emptyScanResultCount++;
+        _logE(
+            'FlutterBlue: Empty Scan. deviceName: ${p.device.name}, emptyScanResultCount: $emptyScanResultCount');
       } else {
         emptyScanResultCount = 0;
       }
