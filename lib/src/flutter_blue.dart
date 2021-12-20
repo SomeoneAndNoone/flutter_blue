@@ -19,6 +19,7 @@ class FlutterBlue {
   /// if last scan time is less than 3 seconds, wait for 3 seconds
   DateTime _lastStopScanTime = DateTime.now().subtract(Duration(hours: 1));
   DateTime _lastDisconnectTime = DateTime.now().subtract(Duration(hours: 1));
+  DateTime _lastEnableAdapterTime = DateTime.now().subtract(Duration(hours: 1));
 
   static Function(String log)? _debugLogger;
   static Function(String log)? _errorLogger;
@@ -47,6 +48,24 @@ class FlutterBlue {
     });
 
     _setLogLevelIfAvailable();
+    Future.delayed(Duration(seconds: 4), observeNativeLogs);
+  }
+
+  void observeNativeLogs() {
+    print('FlutterBlue Native: Obserting started');
+    FlutterBlue.instance._methodStream
+        .where((m) => m.method == "LOG_CHANNEL")
+        .map((m) => m.arguments)
+        .map((buffer) => new protos.LogMessage.fromBuffer(buffer))
+        .listen((logMessage) {
+      if (logMessage.logType == protos.LogMessage_LogType.ERROR) {
+        _logE('FlutterBlue Native: ${logMessage.message}');
+        print('FlutterBlue Native ERROR: ${logMessage.message}');
+      } else {
+        _logD('FlutterBlue Native: ${logMessage.message}');
+        print('FlutterBlue Native Log: ${logMessage.message}');
+      }
+    });
   }
 
   static FlutterBlue _instance = new FlutterBlue._();
@@ -70,6 +89,17 @@ class FlutterBlue {
       FlutterBlue.DELAY_TIME_IN_SECONDS -
           ((DateTime.now().millisecondsSinceEpoch -
                   FlutterBlue.instance._lastStopScanTime.millisecondsSinceEpoch) ~/
+              1000),
+    );
+    return Duration(seconds: delay);
+  }
+
+  static Duration get waitEnableAdapterTime {
+    int delay = max(
+      0,
+      FlutterBlue.DELAY_TIME_IN_SECONDS -
+          ((DateTime.now().millisecondsSinceEpoch -
+                  FlutterBlue.instance._lastEnableAdapterTime.millisecondsSinceEpoch) ~/
               1000),
     );
     return Duration(seconds: delay);
@@ -103,7 +133,6 @@ class FlutterBlue {
     await disableAdapter();
     await Future.delayed(Duration(seconds: 1));
     await enableAdapter(delayIfToggledInSeconds: delayAfterEnable);
-    // while (await enableAdapter(delayInSeconds: delayAfterEnable)) {}
     return true;
   }
 
@@ -194,8 +223,11 @@ class FlutterBlue {
 
   static Future _waitReleaseResources() async {
     int delay = max(
-      waitDisconnectTime.inSeconds,
-      waitScanTime.inSeconds,
+      waitEnableAdapterTime.inSeconds,
+      max(
+        waitDisconnectTime.inSeconds,
+        waitScanTime.inSeconds,
+      ),
     );
     _logD('FlutterBlue: DELAYING $delay seconds');
     print('FlutterBlue: DELAYING $delay seconds');

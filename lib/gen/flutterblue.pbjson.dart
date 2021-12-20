@@ -386,6 +386,27 @@ const DeviceStateResponse_BluetoothDeviceState$json = const {
 
 /// Descriptor for `DeviceStateResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List deviceStateResponseDescriptor = $convert.base64Decode('ChNEZXZpY2VTdGF0ZVJlc3BvbnNlEhsKCXJlbW90ZV9pZBgBIAEoCVIIcmVtb3RlSWQSPwoFc3RhdGUYAiABKA4yKS5EZXZpY2VTdGF0ZVJlc3BvbnNlLkJsdWV0b290aERldmljZVN0YXRlUgVzdGF0ZSJaChRCbHVldG9vdGhEZXZpY2VTdGF0ZRIQCgxESVNDT05ORUNURUQQABIOCgpDT05ORUNUSU5HEAESDQoJQ09OTkVDVEVEEAISEQoNRElTQ09OTkVDVElORxAD');
+@$core.Deprecated('Use logMessageDescriptor instead')
+const LogMessage$json = const {
+  '1': 'LogMessage',
+  '2': const [
+    const {'1': 'logType', '3': 1, '4': 1, '5': 14, '6': '.LogMessage.LogType', '10': 'logType'},
+    const {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
+  ],
+  '4': const [LogMessage_LogType$json],
+};
+
+@$core.Deprecated('Use logMessageDescriptor instead')
+const LogMessage_LogType$json = const {
+  '1': 'LogType',
+  '2': const [
+    const {'1': 'ERROR', '2': 0},
+    const {'1': 'DEBUG', '2': 1},
+  ],
+};
+
+/// Descriptor for `LogMessage`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List logMessageDescriptor = $convert.base64Decode('CgpMb2dNZXNzYWdlEi0KB2xvZ1R5cGUYASABKA4yEy5Mb2dNZXNzYWdlLkxvZ1R5cGVSB2xvZ1R5cGUSGAoHbWVzc2FnZRgCIAEoCVIHbWVzc2FnZSIfCgdMb2dUeXBlEgkKBUVSUk9SEAASCQoFREVCVUcQAQ==');
 @$core.Deprecated('Use connectedDevicesResponseDescriptor instead')
 const ConnectedDevicesResponse$json = const {
   '1': 'ConnectedDevicesResponse',

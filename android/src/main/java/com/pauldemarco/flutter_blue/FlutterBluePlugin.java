@@ -68,6 +68,11 @@ import static android.bluetooth.le.AdvertiseSettings.ADVERTISE_TX_POWER_HIGH;
 /** FlutterBluePlugin */
 public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCallHandler, RequestPermissionsResultListener  {
     private static final String TAG = "FlutterBluePlugin";
+    private static final String LOG_CHANNEL = "LOG_CHANNEL";
+    private static final String LOG_TYPE_ERROR = "ERROR";
+    private static final String LOG_TYPE_DEBUG = "DEBUG";
+
+
     private Object initializationLock = new Object();
     private Context context;
     private MethodChannel channel;
@@ -242,6 +247,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 if(!mBluetoothAdapter.isEnabled()){
                     resultValue = mBluetoothAdapter.enable();
                 }
+                invokeMethodUIThread(LOG_CHANNEL, ProtoMaker.log(LOG_TYPE_DEBUG, "enable adapter result: " + String.valueOf(resultValue)).toByteArray());
                 result.success(resultValue);
                 break;
             }
@@ -255,7 +261,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
                    macDeviceScanned.clear();
                 }
-
+                invokeMethodUIThread(LOG_CHANNEL, ProtoMaker.log(LOG_TYPE_DEBUG, "disable adapter result: " + String.valueOf(resultValue)).toByteArray());
                 result.success(resultValue);
                 break;
             }
@@ -692,6 +698,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         List<BluetoothDevice> devices = mBluetoothManager.getConnectedDevices(BluetoothProfile.GATT);
         for(int i = 0; i < devices.size(); i ++){
+            invokeMethodUIThread(LOG_CHANNEL, ProtoMaker.log(LOG_TYPE_ERROR, "There is still connected device WHY?: " + (String) (devices.get(i).getAddress())).toByteArray());
             log(LogLevel.DEBUG, "FlutterBlue in Native: THERE IS STILL CONNECTED device WHY?: " + (String) (devices.get(i).getAddress()));
         }
 
@@ -758,6 +765,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 @Override
                 public void onScanFailed(int errorCode) {
                     super.onScanFailed(errorCode);
+                    invokeMethodUIThread(LOG_CHANNEL, ProtoMaker.log(LOG_TYPE_ERROR, "OnScanFailed: errorCode:" +  String.valueOf(errorCode)).toByteArray());
                     Protos.ScanResult scanResult = ProtoMaker.scanResultError(errorCode);
                     invokeMethodUIThread("ScanResult", scanResult.toByteArray());
                 }
@@ -861,11 +869,13 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     private AdvertiseCallback mAdvertiseCallback = new AdvertiseCallback() {
         @Override
         public void onStartSuccess(AdvertiseSettings settingsInEffect) {
+            invokeMethodUIThread(LOG_CHANNEL, ProtoMaker.log(LOG_TYPE_DEBUG, "FlutterBlue in Native: Peripheral advertising started").toByteArray());
             Log.d(TAG, "FlutterBlue in Native: Peripheral advertising started");
         }
 
         @Override
         public void onStartFailure(int errorCode) {
+            invokeMethodUIThread(LOG_CHANNEL, ProtoMaker.log(LOG_TYPE_ERROR, "FlutterBlue in Native: Peripheral advertising failed. errorCode: " + String.valueOf(errorCode)).toByteArray());
             Log.d(TAG, "FlutterBlue in Native: Peripheral advertising failed: " + errorCode);
         }
     };

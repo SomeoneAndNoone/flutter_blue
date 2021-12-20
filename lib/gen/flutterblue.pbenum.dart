@@ -87,3 +87,18 @@ class DeviceStateResponse_BluetoothDeviceState extends $pb.ProtobufEnum {
   const DeviceStateResponse_BluetoothDeviceState._($core.int v, $core.String n) : super(v, n);
 }
 
+class LogMessage_LogType extends $pb.ProtobufEnum {
+  static const LogMessage_LogType ERROR = LogMessage_LogType._(0, const $core.bool.fromEnvironment('protobuf.omit_enum_names') ? '' : 'ERROR');
+  static const LogMessage_LogType DEBUG = LogMessage_LogType._(1, const $core.bool.fromEnvironment('protobuf.omit_enum_names') ? '' : 'DEBUG');
+
+  static const $core.List<LogMessage_LogType> values = <LogMessage_LogType> [
+    ERROR,
+    DEBUG,
+  ];
+
+  static final $core.Map<$core.int, LogMessage_LogType> _byValue = $pb.ProtobufEnum.initByValue(values);
+  static LogMessage_LogType? valueOf($core.int value) => _byValue[value];
+
+  const LogMessage_LogType._($core.int v, $core.String n) : super(v, n);
+}
+

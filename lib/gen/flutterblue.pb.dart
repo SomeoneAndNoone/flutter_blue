@@ -2053,6 +2053,67 @@ class DeviceStateResponse extends $pb.GeneratedMessage {
   void clearState() => clearField(2);
 }
 
+class LogMessage extends $pb.GeneratedMessage {
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'LogMessage', createEmptyInstance: create)
+    ..e<LogMessage_LogType>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'logType', $pb.PbFieldType.OE, protoName: 'logType', defaultOrMaker: LogMessage_LogType.ERROR, valueOf: LogMessage_LogType.valueOf, enumValues: LogMessage_LogType.values)
+    ..aOS(2, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'message')
+    ..hasRequiredFields = false
+  ;
+
+  LogMessage._() : super();
+  factory LogMessage({
+    LogMessage_LogType? logType,
+    $core.String? message,
+  }) {
+    final _result = create();
+    if (logType != null) {
+      _result.logType = logType;
+    }
+    if (message != null) {
+      _result.message = message;
+    }
+    return _result;
+  }
+  factory LogMessage.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory LogMessage.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  LogMessage clone() => LogMessage()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  LogMessage copyWith(void Function(LogMessage) updates) => super.copyWith((message) => updates(message as LogMessage)) as LogMessage; // ignore: deprecated_member_use
+  $pb.BuilderInfo get info_ => _i;
+  @$core.pragma('dart2js:noInline')
+  static LogMessage create() => LogMessage._();
+  LogMessage createEmptyInstance() => create();
+  static $pb.PbList<LogMessage> createRepeated() => $pb.PbList<LogMessage>();
+  @$core.pragma('dart2js:noInline')
+  static LogMessage getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<LogMessage>(create);
+  static LogMessage? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  LogMessage_LogType get logType => $_getN(0);
+  @$pb.TagNumber(1)
+  set logType(LogMessage_LogType v) { setField(1, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasLogType() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearLogType() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get message => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set message($core.String v) { $_setString(1, v); }
+  @$pb.TagNumber(2)
+  $core.bool hasMessage() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMessage() => clearField(2);
+}
+
 class ConnectedDevicesResponse extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(const $core.bool.fromEnvironment('protobuf.omit_message_names') ? '' : 'ConnectedDevicesResponse', createEmptyInstance: create)
     ..pc<BluetoothDevice>(1, const $core.bool.fromEnvironment('protobuf.omit_field_names') ? '' : 'devices', $pb.PbFieldType.PM, subBuilder: BluetoothDevice.create)

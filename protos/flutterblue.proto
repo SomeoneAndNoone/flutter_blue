@@ -202,6 +202,15 @@ message DeviceStateResponse {
   BluetoothDeviceState state = 2;
 }
 
+message LogMessage {
+  enum LogType {
+    ERROR = 0;
+    DEBUG = 1;
+  }
+  LogType logType = 1;
+  string message = 2;
+}
+
 message ConnectedDevicesResponse {
   repeated BluetoothDevice devices = 1;
 }
