@@ -61,7 +61,11 @@ import android.bluetooth.le.AdvertiseCallback;
 import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.AdvertiseSettings;
 import android.bluetooth.le.BluetoothLeAdvertiser;
+
 import com.pauldemarco.flutter_blue.models.BluetoothDeviceCache;
+import com.pauldemarco.flutter_blue.util.BluetoothUtils;
+import com.pauldemarco.flutter_blue.util.LogUtil;
+import com.pauldemarco.flutter_blue.util.ProtoMaker;
 
 import static android.bluetooth.le.AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY;
 import static android.bluetooth.le.AdvertiseSettings.ADVERTISE_TX_POWER_HIGH;
@@ -71,10 +75,10 @@ import static android.bluetooth.le.AdvertiseSettings.ADVERTISE_TX_POWER_HIGH;
  * FlutterBluePlugin
  */
 public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCallHandler, RequestPermissionsResultListener {
-    private static final String TAG = "FlutterBluePlugin";
     private static final String LOG_CHANNEL = "LOG_CHANNEL";
     private static final String LOG_TYPE_ERROR = "ERROR";
     private static final String LOG_TYPE_DEBUG = "DEBUG";
+    public static final String TAG = "FlutterBluePlugin";
 
     private Context context;
     private MethodChannel channel;
@@ -91,7 +95,6 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     private static final int REQUEST_FINE_LOCATION_PERMISSIONS = 1452;
     static final private UUID CCCD_ID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
     private final Map<String, BluetoothDeviceCache> mDevices = new HashMap<>();
-    private LogLevel logLevel = LogLevel.EMERGENCY;
     private static final int untitledCompanyManufacturerId = 65535;
 
     // Pending call and result for startScan, in the case where permissions are needed
@@ -150,7 +153,9 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     }
 
     @Override
-    public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) { onAttachedToActivity(binding); }
+    public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
+        onAttachedToActivity(binding);
+    }
 
 
     /// START ---------------------------- METHOD CALLS FROM FLUTTER --------------------------------------
@@ -165,7 +170,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
         switch (call.method) {
             case "setLogLevel": {
                 int logLevelIndex = (int) call.arguments;
-                logLevel = LogLevel.values()[logLevelIndex];
+                LogUtil.setLogLevel(LogUtil.LogLevel.values()[logLevelIndex]);
                 result.success(null);
                 break;
             }
@@ -279,8 +284,8 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                     p.addDevices(ProtoMaker.from(d));
                 }
                 result.success(p.build().toByteArray());
-                log(LogLevel.EMERGENCY, "FlutterBlue in Native: Connected devices count in BluetoothManager: " + devices.size());
-                log(LogLevel.EMERGENCY, "FlutterBlue in Native: Connected devices count in cache: " + mDevices.size());
+                LogUtil.log(LogUtil.LogLevel.EMERGENCY, "FlutterBlue in Native: Connected devices count in BluetoothManager: " + devices.size());
+                LogUtil.log(LogUtil.LogLevel.EMERGENCY, "FlutterBlue in Native: Connected devices count in cache: " + mDevices.size());
                 break;
             }
 
@@ -350,7 +355,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             case "discoverServices": {
                 String deviceId = (String) call.arguments;
                 try {
-                    BluetoothGatt gatt = locateGatt(deviceId);
+                    BluetoothGatt gatt = BluetoothUtils.locateGatt(deviceId, mDevices);
                     if (gatt.discoverServices()) {
                         result.success(null);
                     } else {
@@ -365,7 +370,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             case "services": {
                 String deviceId = (String) call.arguments;
                 try {
-                    BluetoothGatt gatt = locateGatt(deviceId);
+                    BluetoothGatt gatt = BluetoothUtils.locateGatt(deviceId, mDevices);
                     Protos.DiscoverServicesResult.Builder p = Protos.DiscoverServicesResult.newBuilder();
                     p.setRemoteId(deviceId);
                     for (BluetoothGattService s : gatt.getServices()) {
@@ -391,8 +396,8 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 BluetoothGatt gattServer;
                 BluetoothGattCharacteristic characteristic;
                 try {
-                    gattServer = locateGatt(request.getRemoteId());
-                    characteristic = locateCharacteristic(gattServer, request.getServiceUuid(), request.getSecondaryServiceUuid(), request.getCharacteristicUuid());
+                    gattServer = BluetoothUtils.locateGatt(request.getRemoteId(), mDevices);
+                    characteristic = BluetoothUtils.locateCharacteristic(gattServer, request.getServiceUuid(), request.getSecondaryServiceUuid(), request.getCharacteristicUuid());
                 } catch (Exception e) {
                     result.error("read_characteristic_error", e.getMessage(), null);
                     return;
@@ -420,9 +425,9 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 BluetoothGattCharacteristic characteristic;
                 BluetoothGattDescriptor descriptor;
                 try {
-                    gattServer = locateGatt(request.getRemoteId());
-                    characteristic = locateCharacteristic(gattServer, request.getServiceUuid(), request.getSecondaryServiceUuid(), request.getCharacteristicUuid());
-                    descriptor = locateDescriptor(characteristic, request.getDescriptorUuid());
+                    gattServer = BluetoothUtils.locateGatt(request.getRemoteId(), mDevices);
+                    characteristic = BluetoothUtils.locateCharacteristic(gattServer, request.getServiceUuid(), request.getSecondaryServiceUuid(), request.getCharacteristicUuid());
+                    descriptor = BluetoothUtils.locateDescriptor(characteristic, request.getDescriptorUuid());
                 } catch (Exception e) {
                     result.error("read_descriptor_error", e.getMessage(), null);
                     return;
@@ -449,8 +454,8 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 BluetoothGatt gattServer;
                 BluetoothGattCharacteristic characteristic;
                 try {
-                    gattServer = locateGatt(request.getRemoteId());
-                    characteristic = locateCharacteristic(gattServer, request.getServiceUuid(), request.getSecondaryServiceUuid(), request.getCharacteristicUuid());
+                    gattServer = BluetoothUtils.locateGatt(request.getRemoteId(), mDevices);
+                    characteristic = BluetoothUtils.locateCharacteristic(gattServer, request.getServiceUuid(), request.getSecondaryServiceUuid(), request.getCharacteristicUuid());
                 } catch (Exception e) {
                     result.error("write_characteristic_error", e.getMessage(), null);
                     return;
@@ -491,9 +496,9 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 BluetoothGattCharacteristic characteristic;
                 BluetoothGattDescriptor descriptor;
                 try {
-                    gattServer = locateGatt(request.getRemoteId());
-                    characteristic = locateCharacteristic(gattServer, request.getServiceUuid(), request.getSecondaryServiceUuid(), request.getCharacteristicUuid());
-                    descriptor = locateDescriptor(characteristic, request.getDescriptorUuid());
+                    gattServer = BluetoothUtils.locateGatt(request.getRemoteId(), mDevices);
+                    characteristic = BluetoothUtils.locateCharacteristic(gattServer, request.getServiceUuid(), request.getSecondaryServiceUuid(), request.getCharacteristicUuid());
+                    descriptor = BluetoothUtils.locateDescriptor(characteristic, request.getDescriptorUuid());
                 } catch (Exception e) {
                     result.error("write_descriptor_error", e.getMessage(), null);
                     return;
@@ -527,8 +532,8 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 BluetoothGattCharacteristic characteristic;
                 BluetoothGattDescriptor cccDescriptor;
                 try {
-                    gattServer = locateGatt(request.getRemoteId());
-                    characteristic = locateCharacteristic(gattServer, request.getServiceUuid(), request.getSecondaryServiceUuid(), request.getCharacteristicUuid());
+                    gattServer = BluetoothUtils.locateGatt(request.getRemoteId(), mDevices);
+                    characteristic = BluetoothUtils.locateCharacteristic(gattServer, request.getServiceUuid(), request.getSecondaryServiceUuid(), request.getCharacteristicUuid());
                     cccDescriptor = characteristic.getDescriptor(CCCD_ID);
                     if (cccDescriptor == null) {
                         throw new Exception("could not locate CCCD descriptor for characteristic: " + characteristic.getUuid().toString());
@@ -602,7 +607,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
                 BluetoothGatt gatt;
                 try {
-                    gatt = locateGatt(request.getRemoteId());
+                    gatt = BluetoothUtils.locateGatt(request.getRemoteId(), mDevices);
                     int mtu = request.getMtu();
                     if (gatt.requestMtu(mtu)) {
                         result.success(null);
@@ -612,7 +617,6 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 } catch (Exception e) {
                     result.error("requestMtu", e.getMessage(), e);
                 }
-
                 break;
             }
 
@@ -629,7 +633,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             hasAnyDeviceRemoved = true;
             BluetoothDeviceCache cache = entry.getValue();
             BluetoothGatt gattServer = cache.gatt;
-            log(LogLevel.DEBUG, "FlutterBlue in Native: DISCONNECTING device: " + gattServer.getDevice().getAddress());
+            LogUtil.log(LogUtil.LogLevel.DEBUG, "FlutterBlue in Native: DISCONNECTING device: " + gattServer.getDevice().getAddress());
 
             gattServer.disconnect();
             gattServer.close();
@@ -639,7 +643,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
         List<BluetoothDevice> devices = mBluetoothManager.getConnectedDevices(BluetoothProfile.GATT);
         for (int i = 0; i < devices.size(); i++) {
             invokeMethodUIThread(LOG_CHANNEL, ProtoMaker.log(LOG_TYPE_ERROR, "There is still connected device WHY?: " + (devices.get(i).getAddress())).toByteArray());
-            log(LogLevel.DEBUG, "FlutterBlue in Native: THERE IS STILL CONNECTED device WHY?: " + (devices.get(i).getAddress()));
+            LogUtil.log(LogUtil.LogLevel.DEBUG, "FlutterBlue in Native: THERE IS STILL CONNECTED device WHY?: " + (devices.get(i).getAddress()));
         }
 
         return hasAnyDeviceRemoved;
@@ -668,7 +672,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             settings = Protos.ScanSettings.newBuilder().mergeFrom(data).build();
             allowDuplicates = settings.getAllowDuplicates();
             macDeviceScanned.clear();
-            startScan21(settings);
+            startBluetoothLeScan(settings);
             result.success(null);
         } catch (Exception e) {
             result.error("startScan", e.getMessage(), e);
@@ -720,7 +724,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
         return scanCallback;
     }
 
-    private void startScan21(Protos.ScanSettings proto) throws IllegalStateException {
+    private void startBluetoothLeScan(Protos.ScanSettings proto) throws IllegalStateException {
         BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
         if (scanner == null)
             throw new IllegalStateException("getBluetoothLeScanner() is null. Is the Adapter on?");
@@ -772,7 +776,6 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     }
     /// END ---------------------------- SCANNING RELATED METHODS --------------------------------------
 
-
     /// START ---------------------------- ADVERTISING RELATED METHODS --------------------------------------
     private boolean startAdvertising(MethodCall call) {
 
@@ -823,51 +826,6 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     };
     /// END ---------------------------- ADVERTISING RELATED METHODS --------------------------------------
 
-
-    /// START ---------------------------- LOCATING LOCAL CACHE OBJECTS RELATED METHODS --------------------------------------
-    private BluetoothGatt locateGatt(String remoteId) throws Exception {
-        BluetoothDeviceCache cache = mDevices.get(remoteId);
-        if (cache == null || cache.gatt == null) {
-            throw new Exception("no instance of BluetoothGatt, have you connected first?");
-        } else {
-            return cache.gatt;
-        }
-    }
-
-    private BluetoothGattCharacteristic locateCharacteristic(BluetoothGatt gattServer, String serviceId, String secondaryServiceId, String characteristicId) throws Exception {
-        BluetoothGattService primaryService = gattServer.getService(UUID.fromString(serviceId));
-        if (primaryService == null) {
-            throw new Exception("service (" + serviceId + ") could not be located on the device");
-        }
-        BluetoothGattService secondaryService = null;
-        if (secondaryServiceId.length() > 0) {
-            for (BluetoothGattService s : primaryService.getIncludedServices()) {
-                if (s.getUuid().equals(UUID.fromString(secondaryServiceId))) {
-                    secondaryService = s;
-                }
-            }
-            if (secondaryService == null) {
-                throw new Exception("secondary service (" + secondaryServiceId + ") could not be located on the device");
-            }
-        }
-        BluetoothGattService service = (secondaryService != null) ? secondaryService : primaryService;
-        BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(characteristicId));
-        if (characteristic == null) {
-            throw new Exception("characteristic (" + characteristicId + ") could not be located in the service (" + service.getUuid().toString() + ")");
-        }
-        return characteristic;
-    }
-
-    private BluetoothGattDescriptor locateDescriptor(BluetoothGattCharacteristic characteristic, String descriptorId) throws Exception {
-        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID.fromString(descriptorId));
-        if (descriptor == null) {
-            throw new Exception("descriptor (" + descriptorId + ") could not be located in the characteristic (" + characteristic.getUuid().toString() + ")");
-        }
-        return descriptor;
-    }
-    /// END ---------------------------- LOCATING LOCAL CACHE OBJECTS RELATED METHODS --------------------------------------
-
-
     /// START ---------------------------- BLUETOOTH ON/OFF STATE HANDLER --------------------------------------
     private final StreamHandler stateHandler = new StreamHandler() {
         private EventSink sink;
@@ -917,7 +875,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            log(LogLevel.DEBUG, "FlutterBlue in Native: [onConnectionStateChange] status: " + status + " newState: " + newState);
+            LogUtil.log(LogUtil.LogLevel.DEBUG, "FlutterBlue in Native: [onConnectionStateChange] status: " + status + " newState: " + newState);
             if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 if (!mDevices.containsKey(gatt.getDevice().getAddress())) {
                     gatt.close();
@@ -927,7 +885,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     // We successfully connected, proceed with service discovery
-                    log(LogLevel.DEBUG, "FlutterBlue in Native: Device CONNECTED successfully, mac: " + gatt.getDevice().getAddress());
+                    LogUtil.log(LogUtil.LogLevel.DEBUG, "FlutterBlue in Native: Device CONNECTED successfully, mac: " + gatt.getDevice().getAddress());
                 }
             } else {
                 // An error happened...figure out what happened!
@@ -936,7 +894,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 // Disconnected by device - 19
                 // Issue with bond - 22
                 // Device not found - 133(some phone it gives 62)
-                log(LogLevel.DEBUG, "FlutterBlue in Native: ERROR happened: BluetoothGatt status: " + status);
+                LogUtil.log(LogUtil.LogLevel.DEBUG, "FlutterBlue in Native: ERROR happened: BluetoothGatt status: " + status);
                 gatt.close();
             }
             invokeMethodUIThread("DeviceState", ProtoMaker.from(gatt.getDevice(), newState).toByteArray());
@@ -944,7 +902,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-            log(LogLevel.DEBUG, "FlutterBlue in Native: [onServicesDiscovered] count: " + gatt.getServices().size() + " status: " + status);
+            LogUtil.log(LogUtil.LogLevel.DEBUG, "FlutterBlue in Native: [onServicesDiscovered] count: " + gatt.getServices().size() + " status: " + status);
             Protos.DiscoverServicesResult.Builder p = Protos.DiscoverServicesResult.newBuilder();
             p.setRemoteId(gatt.getDevice().getAddress());
             for (BluetoothGattService s : gatt.getServices()) {
@@ -955,7 +913,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         @Override
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            log(LogLevel.DEBUG, "FlutterBlue in Native: [onCharacteristicRead] uuid: " + characteristic.getUuid().toString() + " status: " + status);
+            LogUtil.log(LogUtil.LogLevel.DEBUG, "FlutterBlue in Native: [onCharacteristicRead] uuid: " + characteristic.getUuid().toString() + " status: " + status);
             Protos.ReadCharacteristicResponse.Builder p = Protos.ReadCharacteristicResponse.newBuilder();
             p.setRemoteId(gatt.getDevice().getAddress());
             p.setCharacteristic(ProtoMaker.from(gatt.getDevice(), characteristic, gatt));
@@ -964,7 +922,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            log(LogLevel.DEBUG, "FlutterBlue in Native: [onCharacteristicWrite] uuid: " + characteristic.getUuid().toString() + " status: " + status);
+            LogUtil.log(LogUtil.LogLevel.DEBUG, "FlutterBlue in Native: [onCharacteristicWrite] uuid: " + characteristic.getUuid().toString() + " status: " + status);
             Protos.WriteCharacteristicRequest.Builder request = Protos.WriteCharacteristicRequest.newBuilder();
             request.setRemoteId(gatt.getDevice().getAddress());
             request.setCharacteristicUuid(characteristic.getUuid().toString());
@@ -977,7 +935,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            log(LogLevel.DEBUG, "FlutterBlue in Native: [onCharacteristicChanged] uuid: " + characteristic.getUuid().toString());
+            LogUtil.log(LogUtil.LogLevel.DEBUG, "FlutterBlue in Native: [onCharacteristicChanged] uuid: " + characteristic.getUuid().toString());
             Protos.OnCharacteristicChanged.Builder p = Protos.OnCharacteristicChanged.newBuilder();
             p.setRemoteId(gatt.getDevice().getAddress());
             p.setCharacteristic(ProtoMaker.from(gatt.getDevice(), characteristic, gatt));
@@ -986,7 +944,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         @Override
         public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-            log(LogLevel.DEBUG, "FlutterBlue in Native: [onDescriptorRead] uuid: " + descriptor.getUuid().toString() + " status: " + status);
+            LogUtil.log(LogUtil.LogLevel.DEBUG, "FlutterBlue in Native: [onDescriptorRead] uuid: " + descriptor.getUuid().toString() + " status: " + status);
             // Rebuild the ReadAttributeRequest and send back along with response
             Protos.ReadDescriptorRequest.Builder q = Protos.ReadDescriptorRequest.newBuilder();
             q.setRemoteId(gatt.getDevice().getAddress());
@@ -1014,7 +972,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         @Override
         public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-            log(LogLevel.DEBUG, "FlutterBlue in Native: [onDescriptorWrite] uuid: " + descriptor.getUuid().toString() + " status: " + status);
+            LogUtil.log(LogUtil.LogLevel.DEBUG, "FlutterBlue in Native: [onDescriptorWrite] uuid: " + descriptor.getUuid().toString() + " status: " + status);
             Protos.WriteDescriptorRequest.Builder request = Protos.WriteDescriptorRequest.newBuilder();
             request.setRemoteId(gatt.getDevice().getAddress());
             request.setDescriptorUuid(descriptor.getUuid().toString());
@@ -1036,17 +994,17 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
 
         @Override
         public void onReliableWriteCompleted(BluetoothGatt gatt, int status) {
-            log(LogLevel.DEBUG, "FlutterBlue in Native: [onReliableWriteCompleted] status: " + status);
+            LogUtil.log(LogUtil.LogLevel.DEBUG, "FlutterBlue in Native: [onReliableWriteCompleted] status: " + status);
         }
 
         @Override
         public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
-            log(LogLevel.DEBUG, "FlutterBlue in Native: [onReadRemoteRssi] rssi: " + rssi + " status: " + status);
+            LogUtil.log(LogUtil.LogLevel.DEBUG, "FlutterBlue in Native: [onReadRemoteRssi] rssi: " + rssi + " status: " + status);
         }
 
         @Override
         public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
-            log(LogLevel.DEBUG, "FlutterBlue in Native: [onMtuChanged] mtu: " + mtu + " status: " + status);
+            LogUtil.log(LogUtil.LogLevel.DEBUG, "FlutterBlue in Native: [onMtuChanged] mtu: " + mtu + " status: " + status);
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (mDevices.containsKey(gatt.getDevice().getAddress())) {
                     BluetoothDeviceCache cache = mDevices.get(gatt.getDevice().getAddress());
@@ -1063,30 +1021,20 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     };
     /// END ---------------------------- CONNECTION STATUS RELATED METHODS  --------------------------------------
 
-
-    /// START ---------------------------- LOGGING  --------------------------------------
-    enum LogLevel {
-        EMERGENCY, ALERT, CRITICAL, ERROR, WARNING, NOTICE, INFO, DEBUG
-    }
-
-    private void log(LogLevel level, String message) {
-        if (level.ordinal() <= logLevel.ordinal()) {
-            Log.d(TAG, message);
-        }
-    }
-    /// END ---------------------------- LOGGING  --------------------------------------
-
-
     /// START ---------------------------- SEND NATIVE INSTRUCTIONS TO DART  --------------------------------------
     private void invokeMethodUIThread(final String name, final byte[] byteArray) {
-        activity.runOnUiThread(
-                () -> {
-                    if (channel != null) {
-                        channel.invokeMethod(name, byteArray);
-                    } else {
-                        Log.e(TAG, "FlutterBlue in Native: ERROR: CHANNEL IS NULL");
-                    }
-                });
+        if (activity != null) {
+            activity.runOnUiThread(
+                    () -> {
+                        if (channel != null) {
+                            channel.invokeMethod(name, byteArray);
+                        } else {
+                            Log.e(TAG, "FlutterBlue in Native: ERROR: CHANNEL IS NULL");
+                        }
+                    });
+        } else {
+            Log.e(TAG, "FlutterBlue in Native: Activity is Null");
+        }
     }
     /// END ---------------------------- SEND NATIVE INSTRUCTIONS TO FLUTTER  --------------------------------------
 }
