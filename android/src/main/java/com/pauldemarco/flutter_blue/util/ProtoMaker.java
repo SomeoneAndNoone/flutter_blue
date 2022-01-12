@@ -2,7 +2,7 @@
 // All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-package com.pauldemarco.flutter_blue;
+package com.pauldemarco.flutter_blue.util;
 
 import android.annotation.TargetApi;
 import android.bluetooth.BluetoothDevice;
@@ -14,17 +14,13 @@ import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.os.Build;
-import android.os.Parcel;
 import android.os.ParcelUuid;
-import android.util.Log;
 import android.util.SparseArray;
 
 import com.google.protobuf.ByteString;
-
-import java.util.Iterator;
+import com.pauldemarco.flutter_blue.Protos;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * Created by paul on 8/31/17.
@@ -32,13 +28,12 @@ import java.util.UUID;
 
 public class ProtoMaker {
 
-    private static final UUID CCCD_UUID = UUID.fromString("000002902-0000-1000-8000-00805f9b34fb");
+//    private static final UUID CCCD_UUID = UUID.fromString("000002902-0000-1000-8000-00805f9b34fb");
 
-
-    static Protos.LogMessage log(String logType, String message) {
+    public static Protos.LogMessage log(String logType, String message) {
         Protos.LogMessage.Builder p = Protos.LogMessage.newBuilder();
         p.setMessage(message);
-        if(logType=="ERROR"){
+        if(logType.equals("ERROR")){
             p.setLogType(Protos.LogMessage.LogType.ERROR);
         } else {
             p.setLogType(Protos.LogMessage.LogType.DEBUG);
@@ -47,7 +42,7 @@ public class ProtoMaker {
         return p.build();
     }
 
-    static Protos.ScanResult from(BluetoothDevice device, byte[] advertisementData, int rssi) {
+    public static Protos.ScanResult from(BluetoothDevice device, byte[] advertisementData, int rssi) {
         Protos.ScanResult.Builder p = Protos.ScanResult.newBuilder();
         p.setDevice(from(device));
         if(advertisementData != null && advertisementData.length > 0)
@@ -57,14 +52,14 @@ public class ProtoMaker {
         return p.build();
     }
 
-    static Protos.ScanResult scanResultError(int errorCode) {
+    public static Protos.ScanResult scanResultError(int errorCode) {
         Protos.ScanResult.Builder p = Protos.ScanResult.newBuilder();
         p.setErrorCodeIfError(errorCode);
         return p.build();
     }
 
     @TargetApi(21)
-    static Protos.ScanResult from(BluetoothDevice device, ScanResult scanResult) {
+    public static Protos.ScanResult from(BluetoothDevice device, ScanResult scanResult) {
         Protos.ScanResult.Builder p = Protos.ScanResult.newBuilder();
         p.setDevice(from(device));
         Protos.AdvertisementData.Builder a = Protos.AdvertisementData.newBuilder();
@@ -117,7 +112,7 @@ public class ProtoMaker {
         return p.build();
     }
 
-    static Protos.BluetoothDevice from(BluetoothDevice device) {
+    public static Protos.BluetoothDevice from(BluetoothDevice device) {
         Protos.BluetoothDevice.Builder p = Protos.BluetoothDevice.newBuilder();
         p.setRemoteId(device.getAddress());
         String name = device.getName();
@@ -141,7 +136,7 @@ public class ProtoMaker {
         return p.build();
     }
 
-    static Protos.BluetoothService from(BluetoothDevice device, BluetoothGattService service, BluetoothGatt gatt) {
+    public static Protos.BluetoothService from(BluetoothDevice device, BluetoothGattService service, BluetoothGatt gatt) {
         Protos.BluetoothService.Builder p = Protos.BluetoothService.newBuilder();
         p.setRemoteId(device.getAddress());
         p.setUuid(service.getUuid().toString());
@@ -155,7 +150,7 @@ public class ProtoMaker {
         return p.build();
     }
 
-    static Protos.BluetoothCharacteristic from(BluetoothDevice device, BluetoothGattCharacteristic characteristic, BluetoothGatt gatt) {
+    public static Protos.BluetoothCharacteristic from(BluetoothDevice device, BluetoothGattCharacteristic characteristic, BluetoothGatt gatt) {
         Protos.BluetoothCharacteristic.Builder p = Protos.BluetoothCharacteristic.newBuilder();
         p.setRemoteId(device.getAddress());
         p.setUuid(characteristic.getUuid().toString());
@@ -182,7 +177,7 @@ public class ProtoMaker {
         return p.build();
     }
 
-    static Protos.BluetoothDescriptor from(BluetoothDevice device, BluetoothGattDescriptor descriptor) {
+    public static Protos.BluetoothDescriptor from(BluetoothDevice device, BluetoothGattDescriptor descriptor) {
         Protos.BluetoothDescriptor.Builder p = Protos.BluetoothDescriptor.newBuilder();
         p.setRemoteId(device.getAddress());
         p.setUuid(descriptor.getUuid().toString());
@@ -193,7 +188,7 @@ public class ProtoMaker {
         return p.build();
     }
 
-    static Protos.CharacteristicProperties from(int properties) {
+    public static Protos.CharacteristicProperties from(int properties) {
         return Protos.CharacteristicProperties.newBuilder()
                 .setBroadcast((properties & 1) != 0)
                 .setRead((properties & 2) != 0)
@@ -208,7 +203,7 @@ public class ProtoMaker {
                 .build();
     }
 
-    static Protos.DeviceStateResponse from(BluetoothDevice device, int state) {
+    public static Protos.DeviceStateResponse from(BluetoothDevice device, int state) {
         Protos.DeviceStateResponse.Builder p = Protos.DeviceStateResponse.newBuilder();
         switch(state) {
             case BluetoothProfile.STATE_DISCONNECTING:
