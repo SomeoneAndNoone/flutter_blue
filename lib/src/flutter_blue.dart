@@ -52,7 +52,7 @@ class FlutterBlue {
   }
 
   void observeNativeLogs() {
-    print('FlutterBlue Native: Obserting started');
+    print('FlutterBlue Native: Observing started');
     FlutterBlue.instance._methodStream
         .where((m) => m.method == "LOG_CHANNEL")
         .map((m) => m.arguments)
