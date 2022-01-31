@@ -167,7 +167,6 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             result.error("bluetooth_unavailable", "the device does not have bluetooth", null);
             return;
         }
-
         switch (call.method) {
             case "setLogLevel": {
                 int logLevelIndex = (int) call.arguments;
@@ -255,7 +254,19 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 break;
             }
 
+            case "startDiscovery": {
+                result.success(mBluetoothAdapter.startDiscovery());
+                break;
+            }
+
+            case "cancelDiscovery": {
+                result.success(mBluetoothAdapter.cancelDiscovery());
+                break;
+            }
+
             case "startScan": {
+                // call cancel discovery just in case as mentioned in docs
+                mBluetoothAdapter.cancelDiscovery();
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
                         != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(
@@ -291,6 +302,8 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             }
 
             case "connect": {
+                // call cancel discovery just in case as mentioned in docs
+                mBluetoothAdapter.cancelDiscovery();
                 byte[] data = call.arguments();
                 Protos.ConnectRequest options;
                 try {
