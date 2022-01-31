@@ -116,6 +116,7 @@ class FlutterBlue {
   /// Checks if Bluetooth functionality is turned on
   Future<bool> get isOn => _channel.invokeMethod('isOn').then<bool>((d) => d);
 
+  /// Turns on Bluetooth
   Future<bool> enableAdapter({int delayIfToggledInSeconds = 5}) async {
     if (await isOn) {
       return true;
@@ -127,7 +128,44 @@ class FlutterBlue {
     return result;
   }
 
+  /// Turns off Bluetooth
   Future<bool> disableAdapter() => _channel.invokeMethod('disableAdapter').then<bool>((d) => d);
+
+  /// Start discovering classic Bluetooth devices
+  Future<bool> startDiscovery() => _channel.invokeMethod("startDiscovery").then((value) => value);
+
+  /// Stop discovering classic Bluetooth devices
+  Future<bool> cancelDiscovery() => _channel.invokeMethod("cancelDiscovery").then((value) => value);
+
+  /// Tries to clear bluetooth cache to 256 devices
+  /// [https://github.com/AltBeacon/android-beacon-library/blob/master/lib/src/main/java/org/altbeacon/bluetooth/BluetoothCrashResolver.java]
+  Future<bool> tryToClearDeviceBluetoothCache() async {
+    // We don't actually need to do a discovery -- we just need to kick one off so the
+    // mac list will be pared back to 256.  Because discovery is an expensive operation in
+    // terms of battery, we will cancel it.
+
+    // 1. if bluetooth is off or device is scanning, return false
+    if (!(await isOn) || await isScanning.first) {
+      return false;
+    }
+
+    // 2. if cannot start discovery return false
+    if (!(await startDiscovery())) {
+      return false;
+    }
+
+    // 3. It takes a little over 2 seconds after discovery is started before the pared-down mac file
+    // is written to persistent storage. We let discovery run for a few more seconds just to be sure.
+    await Future.delayed(Duration(seconds: 5));
+
+    // 4. Stop discovery
+    await cancelDiscovery();
+
+    // 5. Wait for a second just in case
+    await Future.delayed(Duration(seconds: 1));
+
+    return true;
+  }
 
   Future<bool> restartBluetooth({int delayAfterEnable = 5}) async {
     await disableAdapter();
