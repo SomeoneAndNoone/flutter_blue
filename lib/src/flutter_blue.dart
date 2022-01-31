@@ -140,6 +140,8 @@ class FlutterBlue {
   /// Tries to clear bluetooth cache to 256 devices
   /// [https://github.com/AltBeacon/android-beacon-library/blob/master/lib/src/main/java/org/altbeacon/bluetooth/BluetoothCrashResolver.java]
   Future<bool> tryToClearDeviceBluetoothCache() async {
+    _logD('Starting to clear native bluetooth cache');
+
     // We don't actually need to do a discovery -- we just need to kick one off so the
     // mac list will be pared back to 256.  Because discovery is an expensive operation in
     // terms of battery, we will cancel it.
