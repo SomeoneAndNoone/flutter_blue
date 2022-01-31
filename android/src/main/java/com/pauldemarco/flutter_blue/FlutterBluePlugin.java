@@ -103,6 +103,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     private final ArrayList<String> macDeviceScanned = new ArrayList<>();
     private boolean allowDuplicates = false;
 
+    //region Activity Aware Methods
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
         Log.i(TAG, "FlutterBlue in Native: setUpPluginInstances");
@@ -156,9 +157,9 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
         onAttachedToActivity(binding);
     }
+    //endregion
 
-
-    /// START ---------------------------- METHOD CALLS FROM FLUTTER --------------------------------------
+    //region METHOD CALLS FROM FLUTTER
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
@@ -661,10 +662,9 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             }
         }
     }
+    //endregion
 
-    /// END ---------------------------- METHOD CALLS FROM DART --------------------------------------
-
-    /// START ---------------------------- SCANNING RELATED METHODS --------------------------------------
+    //region Scanning Related Methods
     private void startScan(MethodCall call, Result result) {
         byte[] data = call.arguments();
         Protos.ScanSettings settings;
@@ -774,9 +774,9 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
         }
         return false;
     }
-    /// END ---------------------------- SCANNING RELATED METHODS --------------------------------------
+    //endregion
 
-    /// START ---------------------------- ADVERTISING RELATED METHODS --------------------------------------
+    //region Advertising Related Methods
     private boolean startAdvertising(MethodCall call) {
 
         BluetoothLeAdvertiser advertiser = mBluetoothAdapter.getBluetoothLeAdvertiser();
@@ -824,9 +824,9 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             Log.d(TAG, "FlutterBlue in Native: Peripheral advertising failed: " + errorCode);
         }
     };
-    /// END ---------------------------- ADVERTISING RELATED METHODS --------------------------------------
+    //endregion
 
-    /// START ---------------------------- BLUETOOTH ON/OFF STATE HANDLER --------------------------------------
+    //region Bluetooth ON/OFF State Handler
     private final StreamHandler stateHandler = new StreamHandler() {
         private EventSink sink;
 
@@ -869,9 +869,9 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             context.unregisterReceiver(mReceiver);
         }
     };
-    /// END ---------------------------- BLUETOOTH ON/OFF STATE HANDLER --------------------------------------
+    //endregion
 
-    /// START ---------------------------- CONNECTION STATUS RELATED METHODS  --------------------------------------
+    //region GatCallBack Methods for Connection Listeners
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
@@ -1019,9 +1019,9 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             }
         }
     };
-    /// END ---------------------------- CONNECTION STATUS RELATED METHODS  --------------------------------------
+    //endregion
 
-    /// START ---------------------------- SEND NATIVE INSTRUCTIONS TO DART  --------------------------------------
+    //region Send Messages To Dart: invokeMethodUIThread(...)
     private void invokeMethodUIThread(final String name, final byte[] byteArray) {
         if (activity != null) {
             activity.runOnUiThread(
@@ -1036,5 +1036,5 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             Log.e(TAG, "FlutterBlue in Native: Activity is Null");
         }
     }
-    /// END ---------------------------- SEND NATIVE INSTRUCTIONS TO FLUTTER  --------------------------------------
+    //endregion
 }
