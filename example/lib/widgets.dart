@@ -6,8 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 
 class ScanResultTile extends StatelessWidget {
-  const ScanResultTile({Key? key, required this.result, this.onTap})
-      : super(key: key);
+  const ScanResultTile({Key? key, required this.result, this.onTap}) : super(key: key);
 
   final ScanResult result;
   final VoidCallback? onTap;
@@ -46,10 +45,7 @@ class ScanResultTile extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: Theme.of(context)
-                  .textTheme
-                  .caption
-                  ?.apply(color: Colors.black),
+              style: Theme.of(context).textTheme.caption?.apply(color: Colors.black),
               softWrap: true,
             ),
           ),
@@ -59,8 +55,7 @@ class ScanResultTile extends StatelessWidget {
   }
 
   String getNiceHexArray(List<int> bytes) {
-    return '[${bytes.map((i) => i.toRadixString(16).padLeft(2, '0')).join(', ')}]'
-        .toUpperCase();
+    return '[${bytes.map((i) => i.toRadixString(16).padLeft(2, '0')).join(', ')}]'.toUpperCase();
   }
 
   String getNiceManufacturerData(Map<int, List<int>> data) {
@@ -69,8 +64,7 @@ class ScanResultTile extends StatelessWidget {
     }
     List<String> res = [];
     data.forEach((id, bytes) {
-      res.add(
-          '${id.toRadixString(16).toUpperCase()}: ${getNiceHexArray(bytes)}');
+      res.add('${id.toRadixString(16).toUpperCase()}: ${getNiceHexArray(bytes)}');
     });
     return res.join(', ');
   }
@@ -91,17 +85,18 @@ class ScanResultTile extends StatelessWidget {
     return ExpansionTile(
       title: _buildTitle(context),
       leading: Text(result.rssi.toString()),
-      trailing: RaisedButton(
+      trailing: ElevatedButton(
         child: Text('CONNECT'),
-        color: Colors.black,
-        textColor: Colors.white,
+        style: ButtonStyle(
+          foregroundColor: MaterialStateColor.resolveWith((states) => Colors.white),
+          backgroundColor: MaterialStateColor.resolveWith((states) => Colors.black),
+        ),
         onPressed: (result.advertisementData.connectable) ? onTap : null,
       ),
       children: <Widget>[
+        _buildAdvRow(context, 'Complete Local Name', result.advertisementData.localName),
         _buildAdvRow(
-            context, 'Complete Local Name', result.advertisementData.localName),
-        _buildAdvRow(context, 'Tx Power Level',
-            '${result.advertisementData.txPowerLevel ?? 'N/A'}'),
+            context, 'Tx Power Level', '${result.advertisementData.txPowerLevel ?? 'N/A'}'),
         _buildAdvRow(context, 'Manufacturer Data',
             getNiceManufacturerData(result.advertisementData.manufacturerData)),
         _buildAdvRow(
@@ -110,8 +105,8 @@ class ScanResultTile extends StatelessWidget {
             (result.advertisementData.serviceUuids.isNotEmpty)
                 ? result.advertisementData.serviceUuids.join(', ').toUpperCase()
                 : 'N/A'),
-        _buildAdvRow(context, 'Service Data',
-            getNiceServiceData(result.advertisementData.serviceData)),
+        _buildAdvRow(
+            context, 'Service Data', getNiceServiceData(result.advertisementData.serviceData)),
       ],
     );
   }
@@ -121,8 +116,7 @@ class ServiceTile extends StatelessWidget {
   final BluetoothService service;
   final List<CharacteristicTile> characteristicTiles;
 
-  const ServiceTile(
-      {Key? key, required this.service, required this.characteristicTiles})
+  const ServiceTile({Key? key, required this.service, required this.characteristicTiles})
       : super(key: key);
 
   @override
@@ -135,8 +129,10 @@ class ServiceTile extends StatelessWidget {
           children: <Widget>[
             Text('Service'),
             Text('0x${service.uuid.toString().toUpperCase().substring(4, 8)}',
-                style: Theme.of(context).textTheme.body1?.copyWith(
-                    color: Theme.of(context).textTheme.caption?.color))
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: Theme.of(context).textTheme.caption?.color))
           ],
         ),
         children: characteristicTiles,
@@ -144,8 +140,7 @@ class ServiceTile extends StatelessWidget {
     } else {
       return ListTile(
         title: Text('Service'),
-        subtitle:
-            Text('0x${service.uuid.toString().toUpperCase().substring(4, 8)}'),
+        subtitle: Text('0x${service.uuid.toString().toUpperCase().substring(4, 8)}'),
       );
     }
   }
@@ -181,10 +176,11 @@ class CharacteristicTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text('Characteristic'),
-                Text(
-                    '0x${characteristic.uuid.toString().toUpperCase().substring(4, 8)}',
-                    style: Theme.of(context).textTheme.body1?.copyWith(
-                        color: Theme.of(context).textTheme.caption?.color))
+                Text('0x${characteristic.uuid.toString().toUpperCase().substring(4, 8)}',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: Theme.of(context).textTheme.caption?.color))
               ],
             ),
             subtitle: Text(value.toString()),
@@ -206,10 +202,7 @@ class CharacteristicTile extends StatelessWidget {
                 onPressed: onWritePressed,
               ),
               IconButton(
-                icon: Icon(
-                    characteristic.isNotifying
-                        ? Icons.sync_disabled
-                        : Icons.sync,
+                icon: Icon(characteristic.isNotifying ? Icons.sync_disabled : Icons.sync,
                     color: Theme.of(context).iconTheme.color?.withOpacity(0.5)),
                 onPressed: onNotificationPressed,
               )
@@ -228,10 +221,7 @@ class DescriptorTile extends StatelessWidget {
   final VoidCallback? onWritePressed;
 
   const DescriptorTile(
-      {Key? key,
-      required this.descriptor,
-      this.onReadPressed,
-      this.onWritePressed})
+      {Key? key, required this.descriptor, this.onReadPressed, this.onWritePressed})
       : super(key: key);
 
   @override
@@ -245,7 +235,7 @@ class DescriptorTile extends StatelessWidget {
           Text('0x${descriptor.uuid.toString().toUpperCase().substring(4, 8)}',
               style: Theme.of(context)
                   .textTheme
-                  .body1
+                  .bodyMedium
                   ?.copyWith(color: Theme.of(context).textTheme.caption?.color))
         ],
       ),
@@ -289,11 +279,11 @@ class AdapterStateTile extends StatelessWidget {
       child: ListTile(
         title: Text(
           'Bluetooth adapter is ${state.toString().substring(15)}',
-          style: Theme.of(context).primaryTextTheme.subhead,
+          style: Theme.of(context).primaryTextTheme.titleMedium,
         ),
         trailing: Icon(
           Icons.error,
-          color: Theme.of(context).primaryTextTheme.subhead?.color,
+          color: Theme.of(context).primaryTextTheme.titleMedium?.color,
         ),
       ),
     );
