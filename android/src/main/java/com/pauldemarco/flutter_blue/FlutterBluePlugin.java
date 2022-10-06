@@ -265,7 +265,8 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                     pendingCall = call;
                     pendingResult = result;
                     break;
-                } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+                }
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
                         != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(
                             activityBinding.getActivity(),
