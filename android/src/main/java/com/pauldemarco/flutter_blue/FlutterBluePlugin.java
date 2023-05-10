@@ -196,7 +196,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
             }
 
             case "startAdvertising": {
-                if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(activityBinding.getActivity(), new String[]{Manifest.permission.BLUETOOTH_ADVERTISE}, REQUEST_CODE_BLUETOOTH_ADVERTISE);
                     result.success(true);
                     break;
