@@ -23,6 +23,8 @@ import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
@@ -76,6 +78,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     private EventChannel stateChannel;
     private BluetoothManager mBluetoothManager;
     private BluetoothAdapter mBluetoothAdapter;
+    private final Object tearDownLock = new Object();
 
     private FlutterPluginBinding pluginBinding;
     private ActivityPluginBinding activityBinding;
@@ -985,13 +988,16 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
     }
 
     private void invokeMethodUIThread(final String name, final byte[] byteArray) {
-        activity.runOnUiThread(
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        channel.invokeMethod(name, byteArray);
-                    }
-                });
+        new Handler(Looper.getMainLooper()).post(() -> {
+            synchronized (tearDownLock) {
+                //Could already be teared down at this moment
+                if (channel != null) {
+                    channel.invokeMethod(name, byteArray);
+                } else {
+                    Log.w(TAG, "Tried to call " + name + " on closed channel");
+                }
+            }
+        });
     }
 
     // BluetoothDeviceCache contains any other cached information not stored in Android Bluetooth API
