@@ -1,4 +1,5 @@
 [![pub package](https://img.shields.io/pub/v/flutter_blue.svg)](https://pub.dartlang.org/packages/flutter_blue)
+[![Chat](https://img.shields.io/discord/634853295160033301.svg?style=flat-square&colorB=758ED3)](https://discord.gg/Yk5Efra)
 
 <br>
 <p align="center">
@@ -8,13 +9,14 @@
 
 ## Introduction
 
-FlutterBlue is a bluetooth plugin for [Flutter](http://www.flutter.io), a new mobile SDK to help developers build modern apps for iOS and Android.
+FlutterBlue is a bluetooth plugin for [Flutter](https://flutter.dev), a new app SDK to help developers build modern multi-platform apps.
 
 ## Alpha version
 
 This library is actively developed alongside production apps, and the API will evolve as we continue our way to version 1.0.
 
 **Please be fully prepared to deal with breaking changes.**
+**This package must be tested on a real device.**
 
 Having trouble adapting to the latest API?   I'd love to hear your use-case, please contact me.
 
@@ -37,10 +39,11 @@ FlutterBlue flutterBlue = FlutterBlue.instance;
 flutterBlue.startScan(timeout: Duration(seconds: 4));
 
 // Listen to scan results
-var subscription = flutterBlue.scanResults.listen((scanResult) {
-    // do something with scan result
-    device = scanResult.device;
-    print('${device.name} found! rssi: ${scanResult.rssi}');
+var subscription = flutterBlue.scanResults.listen((results) {
+    // do something with scan results
+    for (ScanResult r in results) {
+        print('${r.device.name} found! rssi: ${r.rssi}');
+    }
 });
 
 // Stop scanning
@@ -103,7 +106,48 @@ characteristic.value.listen((value) {
 final mtu = await device.mtu.first;
 await device.requestMtu(512);
 ```
-Note that iOS will not allow that you request the MTU size, but will always try to negotiate the highest possible MTU (iOS supports up to MTU size 185)
+Note that iOS will not allow requests of MTU size, and will always try to negotiate the highest possible MTU (iOS supports up to MTU size 185)
+
+## Getting Started
+### Change the minSdkVersion for Android
+
+Flutter_blue is compatible only from version 19 of Android SDK so you should change this in **android/app/build.gradle**:
+```dart
+Android {
+  defaultConfig {
+     minSdkVersion: 19
+```
+### Add permissions for Bluetooth
+We need to add the permission to use Bluetooth and access location:
+
+#### **Android**
+In the **android/app/src/main/AndroidManifest.xml** let’s add:
+
+```xml 
+	 <uses-permission android:name="android.permission.BLUETOOTH" />  
+	 <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />  
+	 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>  
+ <application
+```
+#### **IOS**
+In the **ios/Runner/Info.plist** let’s add:
+
+```dart 
+	<dict>  
+	    <key>NSBluetoothAlwaysUsageDescription</key>  
+	    <string>Need BLE permission</string>  
+	    <key>NSBluetoothPeripheralUsageDescription</key>  
+	    <string>Need BLE permission</string>  
+	    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>  
+	    <string>Need Location permission</string>  
+	    <key>NSLocationAlwaysUsageDescription</key>  
+	    <string>Need Location permission</string>  
+	    <key>NSLocationWhenInUseUsageDescription</key>  
+	    <string>Need Location permission</string>
+```
+
+For location permissions on iOS see more at: [https://developer.apple.com/documentation/corelocation/requesting_authorization_for_location_services](https://developer.apple.com/documentation/corelocation/requesting_authorization_for_location_services)
+
 
 ## Reference
 ### FlutterBlue API
@@ -140,6 +184,6 @@ Note that iOS will not allow that you request the MTU size, but will always try 
 | write                       |  :white_check_mark:  |  :white_check_mark:  | Writes the value of the descriptor. |
 
 ## Troubleshooting
-### Scanning for service UUID's doesn't return any results
+### When I scan using a service UUID filter, it doesn't find any devices.
 Make sure the device is advertising which service UUID's it supports.  This is found in the advertisement
 packet as **UUID 16 bit complete list** or **UUID 128 bit complete list**.

@@ -33,9 +33,9 @@ class FlutterBlueApp extends StatelessWidget {
 }
 
 class BluetoothOffScreen extends StatelessWidget {
-  const BluetoothOffScreen({Key key, this.state}) : super(key: key);
+  const BluetoothOffScreen({Key? key, this.state}) : super(key: key);
 
-  final BluetoothState state;
+  final BluetoothState? state;
 
   @override
   Widget build(BuildContext context) {
@@ -51,11 +51,11 @@ class BluetoothOffScreen extends StatelessWidget {
               color: Colors.white54,
             ),
             Text(
-              'Bluetooth Adapter is ${state.toString().substring(15)}.',
+              'Bluetooth Adapter is ${state != null ? state.toString().substring(15) : 'not available'}.',
               style: Theme.of(context)
                   .primaryTextTheme
-                  .subhead
-                  .copyWith(color: Colors.white),
+                  .titleMedium
+                  ?.copyWith(color: Colors.white),
             ),
           ],
         ),
@@ -82,7 +82,7 @@ class FindDevicesScreen extends StatelessWidget {
                     .asyncMap((_) => FlutterBlue.instance.connectedDevices),
                 initialData: [],
                 builder: (c, snapshot) => Column(
-                  children: snapshot.data
+                  children: snapshot.data!
                       .map((d) => ListTile(
                             title: Text(d.name),
                             subtitle: Text(d.id.toString()),
@@ -92,7 +92,7 @@ class FindDevicesScreen extends StatelessWidget {
                               builder: (c, snapshot) {
                                 if (snapshot.data ==
                                     BluetoothDeviceState.connected) {
-                                  return RaisedButton(
+                                  return ElevatedButton(
                                     child: Text('OPEN'),
                                     onPressed: () => Navigator.of(context).push(
                                         MaterialPageRoute(
@@ -111,7 +111,7 @@ class FindDevicesScreen extends StatelessWidget {
                 stream: FlutterBlue.instance.scanResults,
                 initialData: [],
                 builder: (c, snapshot) => Column(
-                  children: snapshot.data
+                  children: snapshot.data!
                       .map(
                         (r) => ScanResultTile(
                           result: r,
@@ -133,7 +133,7 @@ class FindDevicesScreen extends StatelessWidget {
         stream: FlutterBlue.instance.isScanning,
         initialData: false,
         builder: (c, snapshot) {
-          if (snapshot.data) {
+          if (snapshot.data!) {
             return FloatingActionButton(
               child: Icon(Icons.stop),
               onPressed: () => FlutterBlue.instance.stopScan(),
@@ -152,7 +152,7 @@ class FindDevicesScreen extends StatelessWidget {
 }
 
 class DeviceScreen extends StatelessWidget {
-  const DeviceScreen({Key key, this.device}) : super(key: key);
+  const DeviceScreen({Key? key, required this.device}) : super(key: key);
 
   final BluetoothDevice device;
 
@@ -176,9 +176,14 @@ class DeviceScreen extends StatelessWidget {
                   (c) => CharacteristicTile(
                     characteristic: c,
                     onReadPressed: () => c.read(),
-                    onWritePressed: () => c.write(_getRandomBytes()),
-                    onNotificationPressed: () =>
-                        c.setNotifyValue(!c.isNotifying),
+                    onWritePressed: () async {
+                      await c.write(_getRandomBytes(), withoutResponse: true);
+                      await c.read();
+                    },
+                    onNotificationPressed: () async {
+                      await c.setNotifyValue(!c.isNotifying);
+                      await c.read();
+                    },
                     descriptorTiles: c.descriptors
                         .map(
                           (d) => DescriptorTile(
@@ -206,7 +211,7 @@ class DeviceScreen extends StatelessWidget {
             stream: device.state,
             initialData: BluetoothDeviceState.connecting,
             builder: (c, snapshot) {
-              VoidCallback onPressed;
+              VoidCallback? onPressed;
               String text;
               switch (snapshot.data) {
                 case BluetoothDeviceState.connected:
@@ -222,14 +227,14 @@ class DeviceScreen extends StatelessWidget {
                   text = snapshot.data.toString().substring(21).toUpperCase();
                   break;
               }
-              return FlatButton(
+              return TextButton(
                   onPressed: onPressed,
                   child: Text(
                     text,
                     style: Theme.of(context)
                         .primaryTextTheme
                         .button
-                        .copyWith(color: Colors.white),
+                        ?.copyWith(color: Colors.white),
                   ));
             },
           )
@@ -252,7 +257,7 @@ class DeviceScreen extends StatelessWidget {
                   stream: device.isDiscoveringServices,
                   initialData: false,
                   builder: (c, snapshot) => IndexedStack(
-                    index: snapshot.data ? 1 : 0,
+                    index: snapshot.data! ? 1 : 0,
                     children: <Widget>[
                       IconButton(
                         icon: Icon(Icons.refresh),
@@ -290,7 +295,7 @@ class DeviceScreen extends StatelessWidget {
               initialData: [],
               builder: (c, snapshot) {
                 return Column(
-                  children: _buildServiceTiles(snapshot.data),
+                  children: _buildServiceTiles(snapshot.data!),
                 );
               },
             ),
