@@ -16,7 +16,7 @@ Bluetooth Low Energy plugin for Flutter.
   s.source_files = 'Classes/**/*', 'gen/**/*'
   s.public_header_files = 'Classes/**/*.h', 'gen/**/*.h'
   s.dependency 'Flutter'
-  s.platform = :ios, '8.0'
+  s.platform = :ios, '11.0'
   s.framework = 'CoreBluetooth'
 
   s.subspec "Protos" do |ss|
